@@ -126,20 +126,21 @@ if st.session_state.connection_initialized:
                             key=f"data_{len(st.session_state.messages)}"
                         )
 
-    # Input area
-    col1, col2 = st.columns([0.9, 0.1])
+    # Input area with form (enables Enter key to submit)
+    with st.form("chat_form", clear_on_submit=True):
+        col1, col2 = st.columns([0.9, 0.1])
 
-    with col1:
-        user_input = st.text_input(
-            "Ask about US Census demographics...",
-            placeholder="e.g., What is the population of California?",
-            key="user_input"
-        )
+        with col1:
+            user_input = st.text_input(
+                "Ask about US Census demographics...",
+                placeholder="e.g., What is the population of California?",
+                key="user_input"
+            )
 
-    with col2:
-        submit_button = st.button("Send", use_container_width=True)
+        with col2:
+            submit_button = st.form_submit_button("Send", use_container_width=True)
 
-    # Process user input
+    # Process user input (Enter key or button click)
     if submit_button and user_input:
         # Add user message to history
         st.session_state.messages.append({
