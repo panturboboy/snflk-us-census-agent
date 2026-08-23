@@ -155,11 +155,43 @@ if st.session_state.connection_initialized:
         # Show loading state
         with st.spinner("Analyzing your question..."):
             try:
-                # Query Cortex Analyst
-                result = CortexAnalyst.query(
-                    user_input,
-                    st.session_state.messages[:-1]  # Exclude current message for context
-                )
+                import threading
+                import time
+
+                result = None
+                error = None
+
+                def run_query():
+                    nonlocal result, error
+                    try:
+                        # Query Cortex Analyst
+                        result = CortexAnalyst.query(
+                            user_input,
+                            st.session_state.messages[:-1]  # Exclude current message for context
+                        )
+                    except Exception as e:
+                        error = e
+
+                # Run query in thread with timeout
+                query_thread = threading.Thread(target=run_query, daemon=True)
+                query_thread.start()
+                query_thread.join(timeout=65)  # 65 second timeout
+
+                if query_thread.is_alive():
+                    # Query timed out
+                    st.error("⏱️ Query timed out - Cortex Analyst not responding. Please try again.")
+                    st.session_state.messages.pop()  # Remove the user message we added
+                    st.rerun()
+                    return
+
+                if error:
+                    raise error
+
+                if result is None:
+                    st.error("No response from Cortex Analyst")
+                    st.session_state.messages.pop()  # Remove the user message we added
+                    st.rerun()
+                    return
 
                 # Add assistant response to history
                 st.session_state.messages.append({
