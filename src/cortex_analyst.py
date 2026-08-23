@@ -40,19 +40,19 @@ class CortexAnalyst:
             if age_group.lower() in question_lower:
                 return True, age_group  # Found exact match
 
-        # Check for "age X years" pattern
+        # Check for "age X" or "age X years" pattern (specific age numbers)
         import re
-        age_pattern = r'age\s+(\d+)\s+years?'
+        age_pattern = r'age\s+(\d+)(?:\s+years?)?'
         match = re.search(age_pattern, question_lower)
         if match:
             age_mentioned = match.group(1)
             available = ", ".join(CortexAnalyst.AVAILABLE_AGE_GROUPS)
-            return False, f"""I don't have a specific "age {age_mentioned} years" category.
+            return False, f"""I don't have data for a specific "age {age_mentioned}". The Census data only includes age groups, not individual ages.
 
 **Available age groups:**
 {available}
 
-**Tip:** Try asking about "Under 5 years" or "25 to 29 years" instead."""
+**Tip:** Try asking about "Under 5 years" (which includes ages 0-4) or other age ranges instead."""
 
         return True, ""  # No age group mentioned
 
