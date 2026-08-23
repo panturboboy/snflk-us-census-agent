@@ -288,6 +288,7 @@ Keep it under 100 words."""
                 # LAYER 2: Pre-execution validation (query structure)
                 data_results = []
                 if sql_query:
+                    # Validate before execution
                     try:
                         validator = CortexAnalyst.get_validator()
                         if validator:
@@ -322,6 +323,8 @@ Keep it under 100 words."""
                         logger.error(f"Validation error: {e}", exc_info=True)
                         print(f"DEBUG: Validation error (continuing): {str(e)}", file=sys.stderr)
                         # Don't block execution if validation crashes
+
+                    # Execute SQL query
                     try:
                         print(f"DEBUG: Layer 2 - Executing SQL", file=sys.stderr)
                         from src.snowflake_client import SnowflakeClient
