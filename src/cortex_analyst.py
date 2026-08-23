@@ -175,33 +175,34 @@ Keep it under 100 words."""
                     text = text[:max_len] + "..."
                 return text.strip()
 
-            # CONTEXT PASSING: DISABLED
-            # After testing, Cortex Analyst REST API returns 400 "invalid payload" errors
-            # when context history is included. This appears to be a limitation of:
-            # 1. How Cortex handles conversation history in the API
-            # 2. Character limits or encoding issues with context messages
-            # 3. Unknown schema constraints on message content
-            #
-            # Attempts to fix with:
-            # - Sanitizing markdown: FAILED
-            # - Filtering error messages: Broke message alternation
-            # - Using minimal assistant responses: Still got 400 errors
-            # - Message reordering: Helped but not enough
-            #
-            # WORKAROUND: Each question is treated independently (no context)
-            # This means anaphoric references ("that state") won't work
-            # but at least all questions can be answered.
-            #
-            # TODO: Contact Snowflake support or test with different API versions
-            #
-            # NOTE: Session state still stores full history for UI display
+            # Add conversation history ACCUMULATED INTO SINGLE MESSAGE
+            # Build context from previous questions and combine with current question
+            context_messages = conversation_history[-5:]  # Last 5 messages
 
-            # Add current message (must be last and must be user role)
+            # Extract previous user questions for context
+            previous_questions = [
+                msg['content'] for msg in context_messages
+                if msg.get('role') == 'user'
+            ]
+
+            # Build single message combining context + current question
+            if previous_questions and len(previous_questions) > 1:
+                # We have previous context
+                context_text = "Context from previous questions:\n"
+                for i, q in enumerate(previous_questions[:-1], 1):
+                    context_text += f"{i}. {sanitize_content(q)}\n"
+                context_text += f"\nNow, {user_message}"
+                combined_message = context_text
+            else:
+                # No context, just current question
+                combined_message = user_message
+
+            # Add as single user message
             messages.append({
                 "role": "user",
                 "content": [{
                     "type": "text",
-                    "text": user_message
+                    "text": sanitize_content(combined_message)
                 }]
             })
 
