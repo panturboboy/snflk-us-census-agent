@@ -88,13 +88,24 @@
 
 ---
 
-### ✅ Conversation Context Preservation
-- [x] Session state stores message history
-- [x] Last 3 messages sent to Cortex (context window)
+### ⚠️ Conversation Context Preservation
+- [x] Session state stores message history (UI display)
 - [x] User/assistant roles tracked
 - [x] Clear conversation button to reset
+- ❌ **Context NOT passed to Cortex** (Cortex Analyst API limitation)
 
-**Status:** Complete
+**Status:** Partial - History preserved for UI, not for multi-turn analysis
+
+**Limitation:** Cortex Analyst REST API returns 400 errors when conversation history is included in requests. After testing multiple approaches (sanitization, minimal messages, reordering), root cause appears to be a Cortex API constraint.
+
+**Impact:**
+- ✅ Each question can be answered independently
+- ❌ Anaphoric references don't work ("Which age group is most common?" after "Show me NY population")
+- ❌ Multi-turn conversations lose context
+
+**Workaround:** Users can copy/paste previous answers into new questions for context
+
+**Future:** Contact Snowflake support for official context passing guidance or upgraded API documentation
 
 ---
 
