@@ -176,21 +176,33 @@ Keep it under 100 words."""
                 return text.strip()
 
             # Add conversation history ACCUMULATED INTO SINGLE MESSAGE
-            # Build context from previous questions and combine with current question
+            # Build context from previous questions AND their results
             context_messages = conversation_history[-5:]  # Last 5 messages
 
-            # Extract previous user questions for context
-            previous_questions = [
-                msg['content'] for msg in context_messages
-                if msg.get('role') == 'user'
-            ]
+            # Build context with questions and their results
+            context_items = []
+            for msg in context_messages:
+                if msg.get('role') == 'user':
+                    context_items.append(('question', msg['content']))
+                elif msg.get('role') == 'assistant':
+                    # Include data summary from assistant response
+                    data_count = len(msg.get('data', []))
+                    context_items.append(('answer', msg['content'], data_count))
 
             # Build single message combining context + current question
-            if previous_questions and len(previous_questions) > 1:
-                # We have previous context
-                context_text = "Context from previous questions:\n"
-                for i, q in enumerate(previous_questions[:-1], 1):
-                    context_text += f"{i}. {sanitize_content(q)}\n"
+            if context_items and len(context_items) > 1:
+                # We have previous context - include Q&A pairs
+                context_text = "Context from previous questions and results:\n"
+                question_count = 1
+
+                for item in context_items[:-1]:  # Exclude current question
+                    if item[0] == 'question':
+                        context_text += f"{question_count}. Question: {sanitize_content(item[1])}\n"
+                    elif item[0] == 'answer':
+                        data_summary = f"(returned {item[2]} rows)" if item[2] > 0 else "(no data)"
+                        context_text += f"   Result: {data_summary}\n"
+                        question_count += 1
+
                 context_text += f"\nNow, {user_message}"
                 combined_message = context_text
             else:
