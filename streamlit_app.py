@@ -47,6 +47,9 @@ except (FileNotFoundError, AttributeError, KeyError):
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+if "user_input_text" not in st.session_state:
+    st.session_state.user_input_text = ""
+
 if "connection_initialized" not in st.session_state:
     st.session_state.connection_initialized = False
     try:
@@ -130,22 +133,25 @@ if st.session_state.connection_initialized:
                             key=f"data_{len(st.session_state.messages)}"
                         )
 
-    # Input area with form (enables Enter key to submit)
-    with st.form("chat_form", clear_on_submit=True):
-        col1, col2 = st.columns([0.9, 0.1])
+    # Input area - using simple widgets without form (more reliable)
+    st.divider()
 
-        with col1:
-            user_input = st.text_input(
-                "Ask about US Census demographics...",
-                placeholder="e.g., What is the population of California?",
-                key="user_input"
-            )
+    col1, col2 = st.columns([0.9, 0.1])
+    with col1:
+        user_input = st.text_input(
+            "Ask about US Census demographics...",
+            placeholder="e.g., What is the population of California?",
+            key="user_input_text",
+            on_change=lambda: st.session_state.update({"last_input": st.session_state.user_input_text})
+        )
+    with col2:
+        send_clicked = st.button("Send", use_container_width=True)
 
-        with col2:
-            submit_button = st.form_submit_button("Send", use_container_width=True)
+    # Process user input when Send button clicked
+    if send_clicked and user_input:
+        # Clear input immediately
+        st.session_state.user_input_text = ""
 
-    # Process user input (Enter key or button click)
-    if submit_button and user_input:
         # Add user message to history
         st.session_state.messages.append({
             "role": "user",
