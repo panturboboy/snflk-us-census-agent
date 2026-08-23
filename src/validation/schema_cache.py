@@ -72,7 +72,7 @@ class SemanticMetadataCache:
                 self._refresh()
 
     def _refresh(self):
-        """Populate cache with common lookups"""
+        """Populate cache with common lookups (non-blocking)"""
         try:
             # Pre-populate grain for fact tables
             fact_tables = [
@@ -82,14 +82,20 @@ class SemanticMetadataCache:
             ]
 
             for table in fact_tables:
-                key = f"grain:{table}"
-                self.cache[key] = self.provider.get_fact_table_grain(table)
+                try:
+                    key = f"grain:{table}"
+                    self.cache[key] = self.provider.get_fact_table_grain(table)
 
-                key = f"row_count:{table}"
-                self.cache[key] = self.provider.get_table_row_count(table)
+                    key = f"row_count:{table}"
+                    self.cache[key] = self.provider.get_table_row_count(table)
+                except Exception as table_error:
+                    # Don't block on individual table failures
+                    self.logger.warning(f"Failed to cache {table}: {table_error}")
+                    continue
 
             self.last_refresh = datetime.now()
             self.logger.info("Cache refresh complete")
         except Exception as e:
-            self.logger.error(f"Cache refresh failed: {e}")
-            raise
+            # Don't raise - allow validator to work without full cache
+            self.logger.warning(f"Cache refresh partially failed: {e}")
+            self.last_refresh = datetime.now()

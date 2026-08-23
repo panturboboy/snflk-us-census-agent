@@ -1,0 +1,216 @@
+2026-08-24 00:01:53.462 Starting server...
+2026-08-24 00:01:53.462 Serving static content from /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/streamlit/static
+2026-08-24 00:01:53.464 Server started on port 8501
+2026-08-24 00:01:53.464 Runtime state: RuntimeState.INITIAL -> RuntimeState.NO_SESSIONS_CONNECTED
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://192.168.68.54:8501
+
+  For better performance, install the Watchdog module:
+
+  $ xcode-select --install
+  $ pip install watchdog
+            
+2026-08-24 00:01:53.537 Setting up signal handler
+2026-08-24 00:01:53.789 AppSession initialized (id=4a0c7e8a-4473-4ddf-8624-5712d90d2844)
+2026-08-24 00:01:53.789 Created new session for client 4377212208. Session ID: 4a0c7e8a-4473-4ddf-8624-5712d90d2844
+2026-08-24 00:01:53.789 Runtime state: RuntimeState.NO_SESSIONS_CONNECTED -> RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
+2026-08-24 00:01:53.814 Received the following back message:
+rerun_script {
+  widget_states {
+  }
+}
+
+2026-08-24 00:01:53.814 Beginning script thread
+2026-08-24 00:01:53.814 Running script RerunData(widget_states=)
+2026-08-24 00:01:53.815 Disconnecting files for session with ID 4a0c7e8a-4473-4ddf-8624-5712d90d2844
+2026-08-24 00:01:53.815 Sessions still active: dict_keys([])
+2026-08-24 00:01:53.815 Files: 0; Sessions with files: 0
+2026-08-24 00:01:55.468 AppSession initialized (id=342a530f-6487-4ba4-bec2-744a45d879cd)
+2026-08-24 00:01:55.468 Created new session for client 4976820784. Session ID: 342a530f-6487-4ba4-bec2-744a45d879cd
+2026-08-24 00:01:55.469 Runtime state: RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED -> RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
+2026-08-24 00:01:55.516 AppSession initialized (id=7dc100a2-71fe-47f4-babb-000b36c35dc3)
+2026-08-24 00:01:55.517 Created new session for client 4976823040. Session ID: 7dc100a2-71fe-47f4-babb-000b36c35dc3
+2026-08-24 00:01:55.517 Runtime state: RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED -> RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
+2026-08-24 00:01:57.599 Removing orphaned files...
+2026-08-24 00:01:57.686 Script run finished successfully; removing expired entries from MessageCache (max_age=2)
+2026-08-24 00:02:01.371 Received the following back message:
+rerun_script {
+  widget_states {
+    widgets {
+      id: "$$ID-d837fbad566f3101d30efc564762be42-user_input"
+      string_value: ""
+    }
+    widgets {
+      id: "$$ID-b83502ebdd575a19ccdb0837cf357bf3-example_1"
+      trigger_value: true
+    }
+  }
+  page_script_hash: "81673c27788b9a8a1b0bde307c0772bf"
+}
+
+2026-08-24 00:02:01.372 Beginning script thread
+2026-08-24 00:02:01.372 Running script RerunData(widget_states=widgets {
+  id: "$$ID-d837fbad566f3101d30efc564762be42-user_input"
+  string_value: ""
+}
+widgets {
+  id: "$$ID-b83502ebdd575a19ccdb0837cf357bf3-example_1"
+  trigger_value: true
+}
+, page_script_hash='81673c27788b9a8a1b0bde307c0772bf')
+2026-08-24 00:02:01.373 Disconnecting files for session with ID 4a0c7e8a-4473-4ddf-8624-5712d90d2844
+2026-08-24 00:02:01.373 Sessions still active: dict_keys([])
+2026-08-24 00:02:01.373 Files: 0; Sessions with files: 0
+2026-08-24 00:02:01.378 Removing orphaned files...
+2026-08-24 00:02:01.418 Running script RerunData(page_script_hash='81673c27788b9a8a1b0bde307c0772bf')
+2026-08-24 00:02:01.418 Disconnecting files for session with ID 4a0c7e8a-4473-4ddf-8624-5712d90d2844
+2026-08-24 00:02:01.418 Sessions still active: dict_keys([])
+2026-08-24 00:02:01.418 Files: 0; Sessions with files: 0
+2026-08-24 00:02:01.420 Removing orphaned files...
+2026-08-24 00:02:01.448 Script run finished successfully; removing expired entries from MessageCache (max_age=2)
+2026-08-24 00:02:02.317 Received the following back message:
+rerun_script {
+  widget_states {
+    widgets {
+      id: "$$ID-d837fbad566f3101d30efc564762be42-user_input"
+      string_value: "Show population by age group nationally"
+    }
+    widgets {
+      id: "$$ID-88b13d5cc79617784a6af2a1ba7fcd1a-FormSubmitter:chat_form-Send"
+      trigger_value: true
+    }
+  }
+  page_script_hash: "81673c27788b9a8a1b0bde307c0772bf"
+}
+
+2026-08-24 00:02:02.318 Beginning script thread
+2026-08-24 00:02:02.318 Running script RerunData(widget_states=widgets {
+  id: "$$ID-d837fbad566f3101d30efc564762be42-user_input"
+  string_value: "Show population by age group nationally"
+}
+widgets {
+  id: "$$ID-88b13d5cc79617784a6af2a1ba7fcd1a-FormSubmitter:chat_form-Send"
+  trigger_value: true
+}
+, page_script_hash='81673c27788b9a8a1b0bde307c0772bf')
+2026-08-24 00:02:02.318 Disconnecting files for session with ID 4a0c7e8a-4473-4ddf-8624-5712d90d2844
+2026-08-24 00:02:02.318 Sessions still active: dict_keys([])
+2026-08-24 00:02:02.318 Files: 0; Sessions with files: 0
+DEBUG: Layer 1 - Generating SQL from Cortex
+DEBUG: Payload messages count: 1
+DEBUG: JSON serialization OK, size: 198 bytes
+DEBUG: Response status: 200
+DEBUG: Layer 2 - Pre-execution validation
+Failed to get grain for FACT_POPULATION_AGE: 002003 (42S02): SQL compilation error:
+Object 'CENSUS_NEIGHBORHOOD_INSIGHTS.INFORMATION_SCHEMA.KEY_COLUMN_USAGE' does not exist or not authorized.
+Failed to get grain for FACT_RACE_ETHNICITY: 002003 (42S02): SQL compilation error:
+Object 'CENSUS_NEIGHBORHOOD_INSIGHTS.INFORMATION_SCHEMA.KEY_COLUMN_USAGE' does not exist or not authorized.
+Failed to get grain for FACT_HOUSEHOLD_COMPOSITION: 002003 (42S02): SQL compilation error:
+Object 'CENSUS_NEIGHBORHOOD_INSIGHTS.INFORMATION_SCHEMA.KEY_COLUMN_USAGE' does not exist or not authorized.
+Failed to get grain for CURATED: 002003 (42S02): SQL compilation error:
+Object 'CENSUS_NEIGHBORHOOD_INSIGHTS.INFORMATION_SCHEMA.KEY_COLUMN_USAGE' does not exist or not authorized.
+Could not get grain for CURATED, skipping validation
+Failed to get grain for __POPULATION_AGE: 002003 (42S02): SQL compilation error:
+Object 'CENSUS_NEIGHBORHOOD_INSIGHTS.INFORMATION_SCHEMA.KEY_COLUMN_USAGE' does not exist or not authorized.
+Could not get grain for __POPULATION_AGE, skipping validation
+Failed to get grain for __AGE: 002003 (42S02): SQL compilation error:
+Object 'CENSUS_NEIGHBORHOOD_INSIGHTS.INFORMATION_SCHEMA.KEY_COLUMN_USAGE' does not exist or not authorized.
+Could not get grain for __AGE, skipping validation
+DEBUG: Layer 2 - Executing SQL
+DEBUG: Layer 3 - Empty results, diagnosing
+2026-08-24 00:02:11.532 Change detected: /Users/Iaroslav/Projects/Snowflake/CensusAgent/src/validation/schema_cache.py
+2026-08-24 00:02:13.256 Removing orphaned files...
+2026-08-24 00:02:13.308 Running script RerunData(page_script_hash='81673c27788b9a8a1b0bde307c0772bf')
+2026-08-24 00:02:13.308 Disconnecting files for session with ID 4a0c7e8a-4473-4ddf-8624-5712d90d2844
+2026-08-24 00:02:13.308 Sessions still active: dict_keys([])
+2026-08-24 00:02:13.308 Files: 0; Sessions with files: 0
+2026-08-24 00:02:13.327 Removing orphaned files...
+2026-08-24 00:02:13.374 Script run finished successfully; removing expired entries from MessageCache (max_age=2)
+2026-08-24 00:02:15.438 Received the following back message:
+rerun_script {
+  widget_states {
+    widgets {
+      id: "$$ID-d837fbad566f3101d30efc564762be42-user_input"
+      string_value: ""
+    }
+    widgets {
+      id: "$$ID-c205b76410ee0bc4aa3f34a07d846d9c-example_3"
+      trigger_value: true
+    }
+  }
+  page_script_hash: "81673c27788b9a8a1b0bde307c0772bf"
+}
+
+2026-08-24 00:02:15.439 Beginning script thread
+2026-08-24 00:02:15.439 Running script RerunData(widget_states=widgets {
+  id: "$$ID-d837fbad566f3101d30efc564762be42-user_input"
+  string_value: ""
+}
+widgets {
+  id: "$$ID-c205b76410ee0bc4aa3f34a07d846d9c-example_3"
+  trigger_value: true
+}
+, page_script_hash='81673c27788b9a8a1b0bde307c0772bf')
+2026-08-24 00:02:15.440 Disconnecting files for session with ID 4a0c7e8a-4473-4ddf-8624-5712d90d2844
+2026-08-24 00:02:15.440 Sessions still active: dict_keys([])
+2026-08-24 00:02:15.440 Files: 0; Sessions with files: 0
+2026-08-24 00:02:15.447 Removing orphaned files...
+2026-08-24 00:02:15.497 Running script RerunData(page_script_hash='81673c27788b9a8a1b0bde307c0772bf')
+2026-08-24 00:02:15.497 Disconnecting files for session with ID 4a0c7e8a-4473-4ddf-8624-5712d90d2844
+2026-08-24 00:02:15.497 Sessions still active: dict_keys([])
+2026-08-24 00:02:15.497 Files: 0; Sessions with files: 0
+2026-08-24 00:02:15.500 Removing orphaned files...
+2026-08-24 00:02:15.520 Script run finished successfully; removing expired entries from MessageCache (max_age=2)
+2026-08-24 00:02:16.684 Received the following back message:
+rerun_script {
+  widget_states {
+    widgets {
+      id: "$$ID-d837fbad566f3101d30efc564762be42-user_input"
+      string_value: ""
+    }
+    widgets {
+      id: "$$ID-88b13d5cc79617784a6af2a1ba7fcd1a-FormSubmitter:chat_form-Send"
+      trigger_value: true
+    }
+  }
+  page_script_hash: "81673c27788b9a8a1b0bde307c0772bf"
+}
+
+2026-08-24 00:02:16.685 Beginning script thread
+2026-08-24 00:02:16.685 Running script RerunData(widget_states=widgets {
+  id: "$$ID-d837fbad566f3101d30efc564762be42-user_input"
+  string_value: ""
+}
+widgets {
+  id: "$$ID-88b13d5cc79617784a6af2a1ba7fcd1a-FormSubmitter:chat_form-Send"
+  trigger_value: true
+}
+, page_script_hash='81673c27788b9a8a1b0bde307c0772bf')
+2026-08-24 00:02:16.685 Disconnecting files for session with ID 4a0c7e8a-4473-4ddf-8624-5712d90d2844
+2026-08-24 00:02:16.685 Sessions still active: dict_keys([])
+2026-08-24 00:02:16.685 Files: 0; Sessions with files: 0
+2026-08-24 00:02:16.692 Removing orphaned files...
+2026-08-24 00:02:16.750 Script run finished successfully; removing expired entries from MessageCache (max_age=2)
+2026-08-24 00:02:17.448 Change detected: /Users/Iaroslav/Projects/Snowflake/CensusAgent/src/cortex_analyst.py
+  Stopping...
+2026-08-24 00:02:23.190 Runtime stopping...
+2026-08-24 00:02:23.190 Runtime state: RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED -> RuntimeState.STOPPING
+2026-08-24 00:02:23.191 Shutting down (id=4a0c7e8a-4473-4ddf-8624-5712d90d2844)
+2026-08-24 00:02:23.191 Disconnecting files for session with ID 4a0c7e8a-4473-4ddf-8624-5712d90d2844
+2026-08-24 00:02:23.191 Sessions still active: dict_keys([])
+2026-08-24 00:02:23.191 Files: 0; Sessions with files: 0
+2026-08-24 00:02:23.191 Removing orphaned files...
+2026-08-24 00:02:23.191 Shutting down (id=7dc100a2-71fe-47f4-babb-000b36c35dc3)
+2026-08-24 00:02:23.191 Disconnecting files for session with ID 7dc100a2-71fe-47f4-babb-000b36c35dc3
+2026-08-24 00:02:23.191 Sessions still active: dict_keys([])
+2026-08-24 00:02:23.191 Files: 0; Sessions with files: 0
+2026-08-24 00:02:23.191 Removing orphaned files...
+2026-08-24 00:02:23.191 Shutting down (id=342a530f-6487-4ba4-bec2-744a45d879cd)
+2026-08-24 00:02:23.191 Disconnecting files for session with ID 342a530f-6487-4ba4-bec2-744a45d879cd
+2026-08-24 00:02:23.191 Sessions still active: dict_keys([])
+2026-08-24 00:02:23.191 Files: 0; Sessions with files: 0
+2026-08-24 00:02:23.191 Removing orphaned files...
+2026-08-24 00:02:23.191 Runtime state: RuntimeState.STOPPING -> RuntimeState.STOPPED

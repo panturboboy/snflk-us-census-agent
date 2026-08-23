@@ -36,10 +36,11 @@ class CortexAnalyst:
     }
 
     @classmethod
-    def get_validator(cls):
-        """Get or initialize the query validator (lazy initialization)."""
+    def get_validator(cls, timeout_seconds=5):
+        """Get or initialize the query validator (lazy initialization with timeout)."""
         if cls._validator is None:
             try:
+                # Initialize cache (non-blocking, won't hang on Snowflake issues)
                 cls._metadata_cache = SemanticMetadataCache(refresh_minutes=60)
                 cls._validator = QueryValidator(cls._metadata_cache)
                 logger.info("Query validator initialized")
