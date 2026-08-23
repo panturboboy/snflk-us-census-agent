@@ -73,12 +73,19 @@ class CortexAnalyst:
             }
 
             # Make API request
+            import sys
+            print(f"DEBUG: API URL: {api_url}", file=sys.stderr)
+            print(f"DEBUG: Payload: {json.dumps(payload, indent=2)}", file=sys.stderr)
+
             response = requests.post(
                 api_url,
                 json=payload,
                 headers=headers,
                 timeout=55
             )
+
+            print(f"DEBUG: Response status: {response.status_code}", file=sys.stderr)
+            print(f"DEBUG: Response body: {response.text[:500]}", file=sys.stderr)
 
             if response.status_code == 200:
                 data = response.json()
