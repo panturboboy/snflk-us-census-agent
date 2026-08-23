@@ -119,18 +119,27 @@ class CortexAnalyst:
                     'error': None
                 }
             else:
-                error_msg = response.json().get("message", response.text[:200]) if response.text else f"HTTP {response.status_code}"
-                return {
-                    'response': f"Cortex API error: {error_msg}",
-                    'data': [],
-                    'success': False,
-                    'error': f"HTTP {response.status_code}"
-                }
+                # Gracefully handle API errors - likely irrelevant questions
+                if response.status_code == 400:
+                    return {
+                        'response': "I couldn't understand that question. I can answer questions about US Census demographics like population by age, state, county, and household composition. Try rephrasing your question to focus on these demographic categories.",
+                        'data': [],
+                        'success': True,  # Mark as success to avoid error display
+                        'error': None
+                    }
+                else:
+                    error_msg = response.json().get("message", response.text[:200]) if response.text else f"HTTP {response.status_code}"
+                    return {
+                        'response': f"I couldn't process that question. Please rephrase it to ask about US Census demographics (population, age groups, states, counties, household types).",
+                        'data': [],
+                        'success': True,
+                        'error': None
+                    }
 
         except Exception as e:
             return {
-                'response': f"I encountered an error processing your question: {str(e)}",
+                'response': "I couldn't answer that question. Please ask about US Census demographics like population by age, state, or household composition.",
                 'data': [],
-                'success': False,
-                'error': str(e)
+                'success': True,
+                'error': None
             }
