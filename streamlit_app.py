@@ -141,17 +141,15 @@ if st.session_state.connection_initialized:
         user_input = st.text_input(
             "Ask about US Census demographics...",
             placeholder="e.g., What is the population of California?",
-            key="user_input_text",
-            on_change=lambda: st.session_state.update({"last_input": st.session_state.user_input_text})
+            key="user_input_text"
         )
     with col2:
         send_clicked = st.button("Send", use_container_width=True)
 
     # Process user input when Send button clicked
     if send_clicked and user_input:
-        # Clear input immediately
-        st.session_state.user_input_text = ""
-
+        # Store input before clearing
+        current_input = user_input
         # Add user message to history
         st.session_state.messages.append({
             "role": "user",
