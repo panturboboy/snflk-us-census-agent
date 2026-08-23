@@ -38,22 +38,24 @@ class CortexAnalyst:
             # Build messages array with correct nested structure
             messages = []
 
-            # Add conversation history
+            # Add conversation history (alternate user/assistant messages)
             for msg in conversation_history[-3:]:
-                messages.append({
-                    "role": "user",
-                    "content": [{
-                        "type": "text",
-                        "text": msg['content']
-                    }]
-                })
-                messages.append({
-                    "role": "assistant",
-                    "content": [{
-                        "type": "text",
-                        "text": msg['response']
-                    }]
-                })
+                if msg.get('role') == 'user':
+                    messages.append({
+                        "role": "user",
+                        "content": [{
+                            "type": "text",
+                            "text": msg['content']
+                        }]
+                    })
+                elif msg.get('role') == 'assistant':
+                    messages.append({
+                        "role": "assistant",
+                        "content": [{
+                            "type": "text",
+                            "text": msg['content']
+                        }]
+                    })
 
             # Add current message (must be last and must be user role)
             messages.append({
