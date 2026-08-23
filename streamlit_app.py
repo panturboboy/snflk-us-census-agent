@@ -96,8 +96,12 @@ with st.sidebar:
         "What are the demographics of New York County?",
         "Population breakdown by sex for Florida"
     ]
-    for example in examples:
-        st.caption(f"• {example}")
+    for i, example in enumerate(examples):
+        # Create clickable button for each example
+        if st.button(f"• {example}", key=f"example_{i}", use_container_width=True):
+            # Update the input field with the clicked example
+            st.session_state.user_input = example
+            st.rerun()
 
 # Main chat interface
 if st.session_state.connection_initialized:
