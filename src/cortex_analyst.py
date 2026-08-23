@@ -24,14 +24,11 @@ class CortexAnalyst:
             "county": "Counties",
             "block_group": "Census Block Groups",
             "age_group": "Age Groups (Under 5, 5-9, 10-14, ...)",
-            "race": "Race/Ethnicity categories",
-            "household_type": "Household composition types",
-            "sex": "Sex/Gender"
+            "sex": "Sex/Gender (Male, Female)"
         },
         "metrics": {
             "population_estimate": "Population count",
-            "margin_of_error": "Statistical margin of error",
-            "household_count": "Number of households"
+            "margin_of_error": "Statistical margin of error"
         }
     }
 
@@ -56,11 +53,11 @@ class CortexAnalyst:
         return f"""I can answer questions about US Census demographics with these available data:
 
 **Geographic Levels:** State, County, Block Group
-**Demographics:** Age groups, Race/Ethnicity, Sex
-**Household Data:** Total households, household types
+**Demographics:** Age groups, Sex
+**Data Available:** Population counts by age and sex
 **Metrics:** Population estimates, margins of error
 
-Example: "What is the population of California?" or "Show population by age group nationally"."""
+Example: "What is the population of California?" or "Show population by age group and sex nationally"."""
 
     @staticmethod
     def get_semantic_schema_description() -> str:
@@ -76,7 +73,8 @@ Example: "What is the population of California?" or "Show population by age grou
 **Metrics (aggregations):**
 {metrics}
 
-**Available data:** 2020 US Census at block group level (most granular geographic detail)"""
+**Available data:** 2020 US Census population counts broken down by age and sex at block group level
+**Note:** Only FACT_POPULATION_AGE is populated. Race/ethnicity and household data tables are empty."""
 
 
     @staticmethod
