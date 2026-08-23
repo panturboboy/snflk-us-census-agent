@@ -162,24 +162,39 @@ Keep it under 100 words."""
             # Build messages array with correct nested structure
             messages = []
 
-            # Add conversation history (alternate user/assistant messages)
-            for msg in conversation_history[-3:]:
-                if msg.get('role') == 'user':
-                    messages.append({
-                        "role": "user",
-                        "content": [{
-                            "type": "text",
-                            "text": msg['content']
-                        }]
-                    })
-                elif msg.get('role') == 'assistant':
-                    messages.append({
-                        "role": "assistant",
-                        "content": [{
-                            "type": "text",
-                            "text": msg['content']
-                        }]
-                    })
+            # Helper to sanitize message content for API payload
+            def sanitize_content(text: str) -> str:
+                """Clean message content to prevent API payload issues."""
+                # Remove markdown formatting that might break JSON
+                text = text.replace('**', '')  # Remove bold markers
+                text = text.replace('`', '')   # Remove code markers
+                text = text.replace('\n\n', ' ')  # Replace double newlines with space
+                # Limit length to prevent oversized payloads
+                max_len = 500
+                if len(text) > max_len:
+                    text = text[:max_len] + "..."
+                return text.strip()
+
+            # CONTEXT PASSING: DISABLED
+            # After testing, Cortex Analyst REST API returns 400 "invalid payload" errors
+            # when context history is included. This appears to be a limitation of:
+            # 1. How Cortex handles conversation history in the API
+            # 2. Character limits or encoding issues with context messages
+            # 3. Unknown schema constraints on message content
+            #
+            # Attempts to fix with:
+            # - Sanitizing markdown: FAILED
+            # - Filtering error messages: Broke message alternation
+            # - Using minimal assistant responses: Still got 400 errors
+            # - Message reordering: Helped but not enough
+            #
+            # WORKAROUND: Each question is treated independently (no context)
+            # This means anaphoric references ("that state") won't work
+            # but at least all questions can be answered.
+            #
+            # TODO: Contact Snowflake support or test with different API versions
+            #
+            # NOTE: Session state still stores full history for UI display
 
             # Add current message (must be last and must be user role)
             messages.append({
@@ -197,6 +212,18 @@ Keep it under 100 words."""
             }
 
             print(f"DEBUG: Layer 1 - Generating SQL from Cortex", file=sys.stderr)
+            print(f"DEBUG: Payload messages count: {len(messages)}", file=sys.stderr)
+            if len(messages) > 1:
+                print(f"DEBUG: Message roles: {[m.get('role') for m in messages]}", file=sys.stderr)
+                print(f"DEBUG: Message structure valid: {all(m.get('role') in ['user', 'assistant'] for m in messages)}", file=sys.stderr)
+
+            # Validate JSON can be serialized
+            try:
+                json_test = json.dumps(payload)
+                print(f"DEBUG: JSON serialization OK, size: {len(json_test)} bytes", file=sys.stderr)
+            except Exception as e:
+                print(f"DEBUG: JSON serialization ERROR: {e}", file=sys.stderr)
+                raise
 
             response = requests.post(
                 api_url,
