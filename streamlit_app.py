@@ -133,23 +133,23 @@ if st.session_state.connection_initialized:
                             key=f"data_{len(st.session_state.messages)}"
                         )
 
-    # Input area - using simple widgets without form (more reliable)
+    # Input area with form (enables Enter key)
+    # CRITICAL: Do NOT use clear_on_submit=True - it breaks state tracking on 2nd submit
     st.divider()
 
-    col1, col2 = st.columns([0.9, 0.1])
-    with col1:
-        user_input = st.text_input(
-            "Ask about US Census demographics...",
-            placeholder="e.g., What is the population of California?",
-            key="user_input_text"
-        )
-    with col2:
-        send_clicked = st.button("Send", use_container_width=True)
+    with st.form("chat_form"):
+        col1, col2 = st.columns([0.9, 0.1])
+        with col1:
+            user_input = st.text_input(
+                "Ask about US Census demographics...",
+                placeholder="e.g., What is the population of California?",
+                key="user_input_text"
+            )
+        with col2:
+            send_clicked = st.form_submit_button("Send", use_container_width=True)
 
-    # Process user input when Send button clicked
+    # Process user input when Send button clicked or Enter pressed
     if send_clicked and user_input:
-        # Store input before clearing
-        current_input = user_input
         # Add user message to history
         st.session_state.messages.append({
             "role": "user",
