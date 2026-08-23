@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import re
 from src.cortex_analyst import CortexAnalyst
 
 # Page configuration
@@ -30,8 +31,46 @@ st.markdown("""
         margin-top: 1rem;
         font-size: 0.9rem;
     }
+    .suggestion-button {
+        margin-top: 0.5rem;
+    }
     </style>
     """, unsafe_allow_html=True)
+
+def extract_and_format_suggestions(response_text: str) -> tuple[str, list[str]]:
+    """Extract suggested questions from response and return cleaned text + suggestions.
+
+    Looks for patterns like:
+    - "Try asking: ..."
+    - "You could ask: ..."
+    - "You can also ask: ..."
+
+    Returns: (cleaned_response, list_of_suggestions)
+    """
+    suggestions = []
+
+    # Pattern to match suggestion blocks
+    patterns = [
+        r"Try asking:?\s*\n\s*[-•]\s*(.+?)(?=\n|$)",  # "Try asking:" followed by bullets
+        r"You (?:could|can) (?:also )?ask:?\s*\n\s*[-•]\s*(.+?)(?=\n|$)",  # "You can ask:" format
+    ]
+
+    for pattern in patterns:
+        matches = re.finditer(pattern, response_text, re.IGNORECASE | re.MULTILINE)
+        for match in matches:
+            suggestion = match.group(1).strip().rstrip('.?!')
+            if suggestion and len(suggestion) > 5:  # Only add non-trivial suggestions
+                suggestions.append(suggestion)
+
+    # Remove suggestion sections from response text for cleaner display
+    cleaned_text = response_text
+    for pattern in patterns:
+        cleaned_text = re.sub(pattern, "", cleaned_text, flags=re.IGNORECASE | re.MULTILINE)
+
+    # Remove extra whitespace
+    cleaned_text = re.sub(r'\n\s*\n\s*\n', '\n\n', cleaned_text).strip()
+
+    return cleaned_text, list(dict.fromkeys(suggestions))  # Remove duplicates while preserving order
 
 # Load Streamlit secrets into environment (for Streamlit Cloud)
 try:
@@ -49,6 +88,9 @@ if "messages" not in st.session_state:
 
 if "user_input_text" not in st.session_state:
     st.session_state.user_input_text = ""
+
+if "submit_from_example" not in st.session_state:
+    st.session_state.submit_from_example = False
 
 if "connection_initialized" not in st.session_state:
     st.session_state.connection_initialized = False
@@ -102,8 +144,9 @@ with st.sidebar:
     for i, example in enumerate(examples):
         # Create clickable button for each example
         if st.button(f"• {example}", key=f"example_{i}", use_container_width=True):
-            # Update the input field with the clicked example
+            # Update the input field and flag for auto-submit
             st.session_state.user_input_text = example
+            st.session_state.submit_from_example = True
             st.rerun()
 
 # Main chat interface
@@ -118,11 +161,24 @@ if st.session_state.connection_initialized:
                     </div>
                     """, unsafe_allow_html=True)
             else:
+                # Extract suggestions from response for clickable buttons
+                response_text, suggestions = extract_and_format_suggestions(message['content'])
+
                 st.markdown(f"""
                     <div class="chat-message assistant-message">
-                    <strong>Assistant:</strong> {message['content']}
+                    <strong>Assistant:</strong> {response_text}
                     </div>
                     """, unsafe_allow_html=True)
+
+                # Display suggested questions as clickable buttons
+                if suggestions:
+                    st.markdown("**You can also try:**")
+                    for i, suggestion in enumerate(suggestions):
+                        if st.button(f"• {suggestion}", key=f"suggestion_{len(st.session_state.messages)}_{i}", use_container_width=True):
+                            # Click suggestion: auto-populate input and submit
+                            st.session_state.user_input_text = suggestion
+                            st.session_state.submit_from_example = True
+                            st.rerun()
 
                 # Display data table if available
                 if "data" in message and message["data"]:
@@ -148,8 +204,11 @@ if st.session_state.connection_initialized:
         with col2:
             send_clicked = st.form_submit_button("Send", use_container_width=True)
 
-    # Process user input when Send button clicked or Enter pressed
-    if send_clicked and user_input:
+    # Process user input when Send button clicked, Enter pressed, or example auto-submitted
+    should_submit = send_clicked or (st.session_state.submit_from_example and user_input)
+    if should_submit and user_input:
+        # Clear the auto-submit flag
+        st.session_state.submit_from_example = False
         # Add user message to history
         st.session_state.messages.append({
             "role": "user",

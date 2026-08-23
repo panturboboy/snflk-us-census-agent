@@ -334,11 +334,10 @@ Keep it under 100 words."""
                         # LAYER 3: Check if results are empty
                         if not data_results or len(data_results) == 0:
                             print(f"DEBUG: Layer 3 - Empty results, diagnosing", file=sys.stderr)
-                            diagnosis = CortexAnalyst.diagnose_empty_results(user_message, sql_query)
                             capabilities = CortexAnalyst.get_capabilities_summary()
 
                             return {
-                                'response': f"No data found for that question.\n\n**Why:** {diagnosis}\n\n{capabilities}",
+                                'response': f"No data found for that question. {capabilities}",
                                 'data': [],
                                 'success': True,
                                 'error': None

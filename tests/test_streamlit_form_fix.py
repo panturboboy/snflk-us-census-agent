@@ -63,21 +63,21 @@ class TestStreamlitFormFix:
         """Test: Form submission handler must exist for processing queries
 
         Why: When user presses Enter or clicks Send, we need to detect it
-        and process the query. The if send_clicked condition does this.
+        and process the query. The if should_submit condition does this.
         """
         import pathlib
         app_file = pathlib.Path('/Users/Iaroslav/Projects/Snowflake/CensusAgent/streamlit_app.py')
         content = app_file.read_text()
 
-        # Verify button click handler exists
-        assert 'if send_clicked and user_input:' in content, \
-            "Form submission handler not found"
+        # Verify button click handler exists (handles both old and new patterns)
+        handler_exists = 'should_submit = send_clicked or' in content or 'if send_clicked and user_input:' in content
+        assert handler_exists, "Form submission handler not found"
 
         # Verify we call CortexAnalyst.query when submitted
         lines = content.split('\n')
         handler_found = False
         for i, line in enumerate(lines):
-            if 'if send_clicked and user_input:' in line:
+            if 'if should_submit and user_input:' in line or 'if send_clicked and user_input:' in line:
                 # Check next 15 lines for query call
                 handler_section = '\n'.join(lines[i:i+15])
                 if 'CortexAnalyst.query' in handler_section:
