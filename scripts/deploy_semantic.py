@@ -19,12 +19,18 @@ def deploy_semantic():
         sql = f.read()
 
     try:
-        # Semantic views need full SQL execution
+        # Semantic views need full SQL execution as single statement
         SnowflakeClient.query("USE ROLE ACCOUNTADMIN")
-        SnowflakeClient.query(sql)
-        print("✓ Semantic model deployed")
+        # Remove leading/trailing whitespace and comments, but keep structure
+        cleaned_sql = '\n'.join(
+            line for line in sql.split('\n')
+            if line.strip() and not line.strip().startswith('--')
+        )
+        if cleaned_sql.strip():
+            SnowflakeClient.query(cleaned_sql)
+            print("✓ Semantic model deployed")
     except Exception as e:
-        print(f"✗ Error: {str(e)[:150]}")
+        print(f"✗ Error: {str(e)[:200]}")
         return False
 
     print("\n✓ Semantic layer deployed successfully")

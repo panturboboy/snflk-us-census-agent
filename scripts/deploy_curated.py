@@ -18,16 +18,29 @@ def deploy_curated():
     with open(ddl_file, 'r') as f:
         sql = f.read()
 
-    # Split and execute statements
-    statements = [s.strip() for s in sql.split(';') if s.strip()]
+    # Split statements and filter out empty/comment-only ones
+    statements = []
+    for s in sql.split(';'):
+        s = s.strip()
+        if s and not s.startswith('--'):
+            statements.append(s)
 
     for i, stmt in enumerate(statements, 1):
         try:
             SnowflakeClient.query(stmt)
-            name = stmt.split()[-2] if 'TABLE' in stmt or 'VIEW' in stmt else f'statement {i}'
+            # Extract object name from CREATE statement
+            parts = stmt.upper().split()
+            if 'TABLE' in parts or 'VIEW' in parts:
+                idx = max(
+                    parts.index('TABLE') if 'TABLE' in parts else -1,
+                    parts.index('VIEW') if 'VIEW' in parts else -1
+                )
+                name = parts[idx + 1] if idx >= 0 and idx + 1 < len(parts) else f'statement {i}'
+            else:
+                name = f'statement {i}'
             print(f"✓ {name}")
         except Exception as e:
-            print(f"✗ Error: {str(e)[:100]}")
+            print(f"✗ Error: {str(e)[:150]}")
             return False
 
     print("\n✓ Curated layer deployed successfully")
