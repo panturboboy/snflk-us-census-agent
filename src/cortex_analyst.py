@@ -2,12 +2,20 @@ import requests
 import json
 import os
 import re
+import logging
 from src.config import SnowflakeConfig
+from src.validation import QueryValidator, SemanticMetadataCache
+
+logger = logging.getLogger(__name__)
 
 
 class CortexAnalyst:
     SEMANTIC_VIEW = "CENSUS_NEIGHBORHOOD_INSIGHTS.SEMANTIC.CENSUS_DEMOGRAPHICS_MODEL"
     API_TOKEN = os.getenv("CORTEX_ANALYST_TOKEN", "")
+
+    # Validation layer (lazy-initialized on first use)
+    _validator = None
+    _metadata_cache = None
 
     # Schema metadata for validation
     SEMANTIC_SCHEMA = {
@@ -26,6 +34,20 @@ class CortexAnalyst:
             "household_count": "Number of households"
         }
     }
+
+    @classmethod
+    def get_validator(cls):
+        """Get or initialize the query validator (lazy initialization)."""
+        if cls._validator is None:
+            try:
+                cls._metadata_cache = SemanticMetadataCache(refresh_minutes=60)
+                cls._validator = QueryValidator(cls._metadata_cache)
+                logger.info("Query validator initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize validator: {e}")
+                cls._validator = False  # Mark as failed initialization
+
+        return cls._validator if cls._validator is not False else None
 
     @staticmethod
     def get_capabilities_summary() -> str:
@@ -263,9 +285,43 @@ Keep it under 100 words."""
                     elif content_block.get("type") == "sql":
                         sql_query = content_block.get("statement", "")
 
-                # LAYER 2: Execute SQL and validate results
+                # LAYER 2: Pre-execution validation (query structure)
                 data_results = []
                 if sql_query:
+                    try:
+                        validator = CortexAnalyst.get_validator()
+                        if validator:
+                            print(f"DEBUG: Layer 2 - Pre-execution validation", file=sys.stderr)
+                            validation_report = validator.validate_compiled_query(sql_query)
+
+                            # If validation fails, reject the query
+                            if validation_report.status == 'FAIL':
+                                logger.warning(f"Query validation FAILED: {validation_report.checks}")
+                                print(f"DEBUG: Grain validation failed", file=sys.stderr)
+
+                                # Extract the specific failure message
+                                failure_msg = validation_report.checks.get('grain', {}).get('message', 'Query structure is invalid')
+                                capabilities = CortexAnalyst.get_capabilities_summary()
+
+                                return {
+                                    'response': f"I cannot answer this question because the query structure is invalid.\n\n**Details:** {failure_msg}\n\n{capabilities}",
+                                    'data': [],
+                                    'success': True,
+                                    'error': None,
+                                    'validation_error': validation_report.checks
+                                }
+
+                            # Log warnings but continue
+                            if validation_report.status == 'WARN':
+                                logger.warning(f"Query validation WARNING: {validation_report.checks}")
+                                print(f"DEBUG: Validation warnings: {validation_report.checks}", file=sys.stderr)
+                        else:
+                            logger.debug("Validator not available, skipping pre-execution validation")
+
+                    except Exception as e:
+                        logger.error(f"Validation error: {e}", exc_info=True)
+                        print(f"DEBUG: Validation error (continuing): {str(e)}", file=sys.stderr)
+                        # Don't block execution if validation crashes
                     try:
                         print(f"DEBUG: Layer 2 - Executing SQL", file=sys.stderr)
                         from src.snowflake_client import SnowflakeClient
@@ -285,6 +341,49 @@ Keep it under 100 words."""
                             }
 
                         print(f"DEBUG: Layer 3 passed - Got {len(data_results)} rows", file=sys.stderr)
+
+                        # LAYER 4: Post-execution validation (results integrity)
+                        try:
+                            validator = CortexAnalyst.get_validator()
+                            if validator and sql_query:
+                                print(f"DEBUG: Layer 4 - Post-execution validation", file=sys.stderr)
+                                validation_report = validator.validate_compiled_query_and_results(
+                                    sql_query, data_results
+                                )
+
+                                # Log validation results
+                                if validation_report.status == 'WARN':
+                                    logger.warning(f"Result validation WARNING: {validation_report.checks}")
+                                    print(f"DEBUG: Result warnings: {validation_report.checks}", file=sys.stderr)
+                                    # Append warning note to response
+                                    warnings = []
+                                    for check_name, check_result in validation_report.checks.items():
+                                        if check_result.get('status') == 'WARN':
+                                            warnings.append(f"⚠️ {check_result.get('message', check_name)}")
+
+                                    if warnings:
+                                        analysis_text += "\n\n**Note:** " + " ".join(warnings)
+
+                                elif validation_report.status == 'FAIL':
+                                    logger.warning(f"Result validation FAILED: {validation_report.checks}")
+                                    print(f"DEBUG: Result validation failed", file=sys.stderr)
+                                    # Return error instead of results
+                                    failure_msg = validation_report.checks.get('duplicates', {}).get('message',
+                                                                               'Results contain data quality issues')
+                                    capabilities = CortexAnalyst.get_capabilities_summary()
+
+                                    return {
+                                        'response': f"The query returned data, but there are data quality concerns.\n\n**Issue:** {failure_msg}\n\n{capabilities}",
+                                        'data': [],
+                                        'success': True,
+                                        'error': None,
+                                        'validation_error': validation_report.checks
+                                    }
+
+                        except Exception as e:
+                            logger.error(f"Post-execution validation error: {e}", exc_info=True)
+                            print(f"DEBUG: Post-execution validation error (continuing): {str(e)}", file=sys.stderr)
+                            # Don't block execution if post-validation crashes
 
                     except Exception as e:
                         print(f"DEBUG: SQL execution error: {str(e)}", file=sys.stderr)
