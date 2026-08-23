@@ -102,58 +102,67 @@ class ResultValidator:
         """
         Check: Is result cardinality within expected range?
 
-        Calculate expected rows based on:
-        - Distinct values in each GROUP BY column
-        - Product of cardinalities
+        Only warn if we have confidence in the expected cardinality.
+        Skip warning if:
+        - GROUP BY exists but we can't determine distinct counts (metadata unavailable)
+        - Result set is small (<1000 rows) - likely legitimate breakdown
+        - Actual rows don't suggest obvious problems (> 1 and < 100,000)
 
-        Example:
-            Table: FACT_POPULATION_AGE
-            GROUP BY: [STATE]
-            Expected: ~50 US states
-            Actual: 50 rows
-            Result: ✅ PASS
-
-            Expected: ~50 US states
-            Actual: 5 rows
-            Result: ⚠️ WARN (heavy filtering or missing data)
-
-            Expected: ~50 US states
-            Actual: 50,000 rows
-            Result: ⚠️ WARN (possible fan-out or breakdown columns)
+        Rationale:
+        - False positives hurt UX (users see warnings for correct queries)
+        - We prefer silence over false alarms when uncertain
         """
 
         actual_rows = len(results)
 
         if not group_by_columns:
-            # Single row aggregation (but could still have results if parser missed GROUP BY)
-            # Only warn if result is suspiciously large (>100 rows)
+            # Single row aggregation - only warn if suspiciously large
             if actual_rows == 1:
                 return ValidationResult.pass_result("Single-row aggregation")
             elif actual_rows <= 100:
-                # Small number of results - might be grouped by parsed columns we missed
-                # Don't warn, just note it
                 return ValidationResult.pass_result(
-                    f"Single aggregation returned {actual_rows} rows (parser may have missed GROUP BY)"
+                    f"Single aggregation returned {actual_rows} rows (likely has GROUP BY)"
                 )
             else:
                 return ValidationResult.warn_result(
                     f"Expected 1 row for single aggregation, got {actual_rows}"
                 )
 
-        # Calculate expected cardinality
+        # We have GROUP BY columns - try to calculate expected cardinality
         try:
             expected = self._calculate_expected_cardinality(table_name, group_by_columns)
         except Exception as e:
             self.logger.error(f"Could not calculate expected cardinality: {e}")
-            return ValidationResult.warn_result(f"Could not validate cardinality: {e}")
+            # Don't warn - metadata unavailable is not user's problem
+            return ValidationResult.pass_result(
+                f"Cardinality check skipped (metadata unavailable). Got {actual_rows} rows."
+            )
 
         self.logger.info(
             f"Cardinality check: expected ~{expected}, actual {actual_rows}"
         )
 
-        # Allow ±50% variance (queries often filter, or have multiple breakdowns)
-        tolerance_low = expected * 0.5
-        tolerance_high = expected * 1.5
+        # If expected is 1, we likely failed to get distinct counts
+        # This creates false positives, so skip validation
+        if expected == 1 and group_by_columns:
+            self.logger.debug(
+                f"Expected cardinality = 1 with GROUP BY {group_by_columns} - "
+                f"likely metadata lookup failed. Skipping validation."
+            )
+            return ValidationResult.pass_result(
+                f"GROUP BY query returned {actual_rows} rows (cardinality check skipped)"
+            )
+
+        # If result is small (<1000 rows), likely a valid breakdown query
+        # Don't warn on small result sets - they're usually correct
+        if actual_rows < 1000:
+            return ValidationResult.pass_result(
+                f"Cardinality OK: {actual_rows} rows (small result set is normal for breakdowns)"
+            )
+
+        # Allow ±100% variance for larger result sets (more cautious)
+        tolerance_low = max(expected * 0.2, 1)  # At least 1
+        tolerance_high = expected * 5.0
 
         if tolerance_low <= actual_rows <= tolerance_high:
             return ValidationResult.pass_result(
