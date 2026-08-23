@@ -48,11 +48,18 @@ if "connection_initialized" not in st.session_state:
     try:
         # Test Snowflake connection
         from src.snowflake_client import SnowflakeClient
+        from src.config import SnowflakeConfig
+
+        SnowflakeConfig.validate()
         SnowflakeClient.get_connection()
         st.session_state.connection_initialized = True
+    except ValueError as e:
+        st.error(f"Configuration error: {e}")
+        st.warning("Add these to Streamlit Cloud Secrets:\nSNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PASSWORD, SNOWFLAKE_DATABASE, SNOWFLAKE_SCHEMA, SNOWFLAKE_WAREHOUSE, CORTEX_ANALYST_TOKEN")
+        st.stop()
     except Exception as e:
         st.error(f"Snowflake connection error: {e}")
-        st.info("Please add Snowflake secrets in Streamlit Cloud settings")
+        st.info("Verify credentials are correct in Streamlit Cloud Secrets")
         st.stop()
 
 # Header
