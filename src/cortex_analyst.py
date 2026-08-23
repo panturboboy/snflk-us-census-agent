@@ -252,11 +252,21 @@ or should we try a different approach? Be concise."""
                     'error': None
                 }
             else:
-                # API error - likely invalid question for semantic model
+                # API error - get Cortex's error message
                 print(f"DEBUG: API error {response.status_code}", file=sys.stderr)
+                print(f"DEBUG: Error response: {response.text[:500]}", file=sys.stderr)
+
                 capabilities = CortexAnalyst.get_capabilities_summary()
+
+                # Try to extract error message from Cortex
+                try:
+                    error_data = response.json()
+                    error_msg = error_data.get('message', 'Could not process your question.')
+                except:
+                    error_msg = response.text[:200] if response.text else 'API error'
+
                 return {
-                    'response': f"I couldn't process that question.\n\n{capabilities}",
+                    'response': f"I cannot answer that question.\n\n**Reason:** {error_msg}\n\n{capabilities}",
                     'data': [],
                     'success': True,
                     'error': None

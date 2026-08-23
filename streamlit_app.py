@@ -34,10 +34,14 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # Load Streamlit secrets into environment (for Streamlit Cloud)
-if st.secrets:
-    for key, value in st.secrets.items():
+try:
+    secrets_dict = st.secrets.to_dict()
+    for key, value in secrets_dict.items():
         if not os.getenv(key):
             os.environ[key] = str(value)
+except (FileNotFoundError, AttributeError, KeyError):
+    # Secrets not configured (expected in local dev, use .env instead)
+    pass
 
 # Initialize session state
 if "messages" not in st.session_state:
