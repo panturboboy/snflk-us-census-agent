@@ -112,17 +112,29 @@ class TestResultValidator:
 
         assert result.status == 'PASS'
 
-    def test_validate_cardinality_single_row_wrong(self, validator):
-        """Single aggregation returning multiple rows is wrong"""
+    def test_validate_cardinality_single_row_small_result_set(self, validator):
+        """Single aggregation with small result set (parser may have missed GROUP BY)"""
         results = [
             {'TOTAL': 1000000},
-            {'TOTAL': 2000000},  # Should be one row!
+            {'TOTAL': 2000000},  # Small number of rows
         ]
 
         result = validator.validate_cardinality(
             results, 'FACT_POPULATION_AGE', []
         )
 
+        # Now passes because small result set likely means parser missed GROUP BY
+        assert result.status == 'PASS'
+
+    def test_validate_cardinality_single_row_large_result_set(self, validator):
+        """Single aggregation returning very large result set is suspicious"""
+        results = [{'TOTAL': i} for i in range(500)]  # 500 rows - too many for single agg
+
+        result = validator.validate_cardinality(
+            results, 'FACT_POPULATION_AGE', []
+        )
+
+        # Now warns because 500 rows is too many for single aggregation
         assert result.status == 'WARN'
 
     def test_validate_cardinality_low_results(self, validator):

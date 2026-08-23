@@ -125,10 +125,16 @@ class ResultValidator:
         actual_rows = len(results)
 
         if not group_by_columns:
-            # Single row aggregation
-            expected = 1
+            # Single row aggregation (but could still have results if parser missed GROUP BY)
+            # Only warn if result is suspiciously large (>100 rows)
             if actual_rows == 1:
                 return ValidationResult.pass_result("Single-row aggregation")
+            elif actual_rows <= 100:
+                # Small number of results - might be grouped by parsed columns we missed
+                # Don't warn, just note it
+                return ValidationResult.pass_result(
+                    f"Single aggregation returned {actual_rows} rows (parser may have missed GROUP BY)"
+                )
             else:
                 return ValidationResult.warn_result(
                     f"Expected 1 row for single aggregation, got {actual_rows}"

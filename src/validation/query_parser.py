@@ -94,22 +94,41 @@ class QueryParser:
     @staticmethod
     def _extract_group_by(sql: str) -> List[str]:
         """Extract GROUP BY columns"""
-        pattern = r'GROUP\s+BY\s+(.*?)(?:HAVING|ORDER|$)'
-        match = re.search(pattern, sql, re.IGNORECASE | re.DOTALL)
+        # Try multiple patterns to handle different SQL formatting
+        patterns = [
+            r'GROUP\s+BY\s+(.*?)(?:HAVING|ORDER|LIMIT|$)',  # Most common
+            r'GROUP\s+BY\s+(.*?)$',  # Catch GROUP BY at end
+        ]
 
-        if not match:
+        group_by_part = None
+        for pattern in patterns:
+            match = re.search(pattern, sql, re.IGNORECASE | re.DOTALL)
+            if match:
+                group_by_part = match.group(1).strip()
+                break
+
+        if not group_by_part:
             return []
 
-        group_by_part = match.group(1).strip()
+        # Clean up the GROUP BY part
+        # Remove trailing semicolons, newlines, etc
+        group_by_part = group_by_part.rstrip(';').strip()
+
+        # Split by comma but handle cases with newlines
         columns = [col.strip().upper() for col in group_by_part.split(',')]
 
-        # Clean up column names (remove table aliases)
+        # Clean up column names (remove table aliases and functions)
         cleaned = []
         for col in columns:
+            if not col:
+                continue
             # Handle "TABLE.COLUMN" format
             if '.' in col:
                 col = col.split('.')[-1]
-            cleaned.append(col)
+            # Remove any trailing characters
+            col = col.split()[0] if col else ''
+            if col:
+                cleaned.append(col)
 
         return cleaned
 
