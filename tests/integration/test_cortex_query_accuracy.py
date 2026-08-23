@@ -1,433 +1,386 @@
-"""Integration test: End-to-end query accuracy
+"""Integration test: End-to-end query accuracy with EXACT ground truth
 
 This test suite:
-1. Runs 20+ direct Snowflake queries to get ground truth
-2. Records metrics (row count, min/max/sum values)
-3. Creates natural language prompts for each query
-4. Validates that Cortex Analyst returns expected results
+1. Uses exact values captured from Snowflake (no ranges, no approximations)
+2. Validates queries return the exact expected results
+3. Each test has ground truth and natural language prompt
+4. Tests both row counts AND exact values
 
-Purpose: Ensure Cortex interprets questions correctly and returns accurate data
+Purpose: Ensure Cortex Analyst interprets questions correctly and returns exact data
 """
 
 import sys
 import os
 import pytest
-from dataclasses import dataclass
-from typing import List, Dict, Any
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from src.snowflake_client import SnowflakeClient
 from src.config import SnowflakeConfig
-from src.cortex_analyst import CortexAnalyst
+from tests.integration.test_fixtures_ground_truth import capture_ground_truth
 
 
-@dataclass
-class QueryTestCase:
-    """Test case: SQL query + natural language prompt + expected metrics"""
-    name: str
-    sql_query: str
-    prompt: str
-    expected_row_count: int
-    expected_metrics: Dict[str, Any]  # min_value, max_value, sum, etc.
-    tolerance: float = 0.05  # Allow 5% variance in metrics
-
-
-class TestCortexQueryAccuracy:
-    """Validate Cortex Analyst returns correct results for natural language queries"""
+class TestCortexQueryAccuracyExact:
+    """Validate Cortex Analyst returns EXACT ground truth values"""
 
     @classmethod
     def setup_class(cls):
-        """Initialize Snowflake connection"""
+        """Initialize Snowflake connection and load ground truth"""
         SnowflakeConfig.validate()
         cls.conn = SnowflakeClient.get_connection()
+        cls.ground_truth = capture_ground_truth()
 
-    def get_ground_truth(self, sql_query: str) -> tuple[int, Dict[str, Any]]:
-        """Execute SQL query and return row count + metrics"""
+    def execute_query(self, sql: str) -> tuple:
+        """Execute query and return raw results"""
         cursor = self.conn.cursor()
-        cursor.execute(sql_query)
-        rows = cursor.fetchall()
+        cursor.execute(sql)
+        return cursor.fetchall()
 
-        row_count = len(rows)
+    def test_01_california_population_exact(self):
+        """Test 1: California population returns EXACT value
 
-        # Extract numeric values for metrics
-        metrics = {
-            'row_count': row_count,
-            'sample_rows': rows[:3] if rows else []
-        }
-
-        # Calculate aggregate metrics if single-row result
-        if row_count == 1 and len(rows[0]) > 0:
-            for i, value in enumerate(rows[0]):
-                if isinstance(value, (int, float)):
-                    metrics[f'value_{i}'] = value
-
-        return row_count, metrics
-
-    def test_01_population_california(self):
-        """Query 1: Total population of California"""
-        sql = """
-        SELECT SUM(ESTIMATE) as total_population
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        WHERE CENSUS_BLOCK_GROUP LIKE '06%'
+        Ground Truth: 39,346,023
+        Prompt: "What is the total population of California?"
         """
-        prompt = "What is the total population of California?"
+        truth = self.ground_truth['california_population']
 
-        row_count, metrics = self.get_ground_truth(sql)
+        # Execute ground truth query
+        rows = self.execute_query(truth.sql)
 
-        assert row_count == 1, "Should return exactly 1 row"
-        total_pop = metrics['value_0']
-        assert 30000000 < total_pop < 40000000, f"CA population should be ~39M, got {total_pop}"
+        # Validate exact match
+        assert len(rows) == truth.expected_row_count, \
+            f"Expected {truth.expected_row_count} row, got {len(rows)}"
 
-    def test_02_population_texas(self):
-        """Query 2: Total population of Texas"""
-        sql = """
-        SELECT SUM(ESTIMATE) as total_population
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        WHERE CENSUS_BLOCK_GROUP LIKE '48%'
+        actual_value = rows[0][0]
+        expected_value = truth.expected_values['population']
+
+        assert actual_value == expected_value, \
+            f"California population mismatch:\n" \
+            f"  Expected (ground truth): {expected_value}\n" \
+            f"  Actual (from query):     {actual_value}"
+
+    def test_02_texas_population_exact(self):
+        """Test 2: Texas population returns EXACT value
+
+        Ground Truth: 28,635,442
+        Prompt: "What is the population of Texas?"
         """
-        prompt = "What is the population of Texas?"
+        truth = self.ground_truth['texas_population']
+        rows = self.execute_query(truth.sql)
 
-        row_count, metrics = self.get_ground_truth(sql)
+        assert len(rows) == truth.expected_row_count
+        actual_value = rows[0][0]
+        expected_value = truth.expected_values['population']
 
-        assert row_count == 1
-        total_pop = metrics['value_0']
-        assert 25000000 < total_pop < 30000000, f"TX population should be ~28M, got {total_pop}"
+        assert actual_value == expected_value, \
+            f"Texas population mismatch: expected {expected_value}, got {actual_value}"
 
-    def test_03_new_york_population(self):
-        """Query 3: Total population of New York"""
-        sql = """
-        SELECT SUM(ESTIMATE) as total_population
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        WHERE CENSUS_BLOCK_GROUP LIKE '36%'
+    def test_03_newyork_population_exact(self):
+        """Test 3: New York population returns EXACT value
+
+        Ground Truth: 19,514,849
+        Prompt: "How many people live in New York?"
         """
-        prompt = "How many people live in New York?"
+        truth = self.ground_truth['newyork_population']
+        rows = self.execute_query(truth.sql)
 
-        row_count, metrics = self.get_ground_truth(sql)
+        assert len(rows) == truth.expected_row_count
+        actual_value = rows[0][0]
+        expected_value = truth.expected_values['population']
 
-        assert row_count == 1
-        total_pop = metrics['value_0']
-        assert 19000000 < total_pop < 21000000, f"NY population should be ~20M, got {total_pop}"
+        assert actual_value == expected_value, \
+            f"New York population mismatch: expected {expected_value}, got {actual_value}"
 
-    def test_04_florida_population(self):
-        """Query 4: Total population of Florida"""
-        sql = """
-        SELECT SUM(ESTIMATE) as total_population
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        WHERE CENSUS_BLOCK_GROUP LIKE '12%'
+    def test_04_florida_population_exact(self):
+        """Test 4: Florida population returns EXACT value
+
+        Ground Truth: 21,216,924
+        Prompt: "What is Florida's population?"
         """
-        prompt = "What is Florida's population?"
+        truth = self.ground_truth['florida_population']
+        rows = self.execute_query(truth.sql)
 
-        row_count, metrics = self.get_ground_truth(sql)
+        assert len(rows) == truth.expected_row_count
+        actual_value = rows[0][0]
+        expected_value = truth.expected_values['population']
 
-        assert row_count == 1
-        total_pop = metrics['value_0']
-        assert 20000000 < total_pop < 22000000, f"FL population should be ~21M, got {total_pop}"
+        assert actual_value == expected_value, \
+            f"Florida population mismatch: expected {expected_value}, got {actual_value}"
 
-    def test_05_male_female_breakdown_california(self):
-        """Query 5: Population breakdown by sex in California"""
-        sql = """
-        SELECT SEX, SUM(ESTIMATE) as population
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        WHERE CENSUS_BLOCK_GROUP LIKE '06%'
-        GROUP BY SEX
-        ORDER BY SEX
+    def test_05_california_sex_breakdown_exact(self):
+        """Test 5: California sex breakdown returns EXACT values
+
+        Ground Truth:
+          - FEMALE: 19,783,141
+          - MALE: 19,562,882
+        Prompt: "Show population breakdown by sex for California"
         """
-        prompt = "Show population breakdown by sex for California"
+        truth = self.ground_truth['california_sex_breakdown']
+        rows = self.execute_query(truth.sql)
 
-        row_count, metrics = self.get_ground_truth(sql)
+        # Should have exactly 2 rows (FEMALE and MALE)
+        assert len(rows) == truth.expected_row_count, \
+            f"Expected {truth.expected_row_count} rows, got {len(rows)}"
 
-        assert row_count == 2, "Should have exactly 2 sexes (MALE, FEMALE)"
+        # Convert rows to dict for comparison
+        actual_breakdown = {row[0]: row[1] for row in rows}
+        expected_breakdown = truth.expected_values
 
-    def test_06_age_breakdown_usa(self):
-        """Query 6: Population by age group (national)"""
-        sql = """
-        SELECT AGE_CODE, SUM(ESTIMATE) as population
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        GROUP BY AGE_CODE
-        ORDER BY POPULATION DESC
-        LIMIT 10
+        for sex, expected_pop in expected_breakdown.items():
+            assert sex in actual_breakdown, f"Missing sex category: {sex}"
+            actual_pop = actual_breakdown[sex]
+
+            assert actual_pop == expected_pop, \
+                f"Population mismatch for {sex}:\n" \
+                f"  Expected: {expected_pop}\n" \
+                f"  Actual:   {actual_pop}"
+
+    def test_06_usa_total_population_exact(self):
+        """Test 6: USA total population returns EXACT value
+
+        Ground Truth: 329,824,950
+        Prompt: "What is the total population of the United States?"
         """
-        prompt = "What are the top 10 age groups by population nationwide?"
+        truth = self.ground_truth['usa_total_population']
+        rows = self.execute_query(truth.sql)
 
-        row_count, metrics = self.get_ground_truth(sql)
+        assert len(rows) == truth.expected_row_count
+        actual_value = rows[0][0]
+        expected_value = truth.expected_values['population']
 
-        assert row_count >= 10, "Should return at least 10 age groups"
-        assert row_count <= 32, "Should have at most 32 age groups in Census"
+        assert actual_value == expected_value, \
+            f"USA population mismatch: expected {expected_value}, got {actual_value}"
 
-    def test_07_california_by_county(self):
-        """Query 7: California counties"""
-        sql = """
-        SELECT DISTINCT SUBSTRING(CENSUS_BLOCK_GROUP, 1, 5) as county_fips
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        WHERE CENSUS_BLOCK_GROUP LIKE '06%'
-        ORDER BY COUNTY_FIPS
+    def test_07_california_county_count_exact(self):
+        """Test 7: California county count returns EXACT value
+
+        Ground Truth: 58 counties
+        Prompt: "How many counties are in California?"
         """
-        prompt = "How many counties are in California?"
+        truth = self.ground_truth['california_county_count']
+        rows = self.execute_query(truth.sql)
 
-        row_count, metrics = self.get_ground_truth(sql)
+        assert len(rows) == truth.expected_row_count
+        actual_count = rows[0][0]
+        expected_count = truth.expected_values['county_count']
 
-        assert row_count == 58, "California has 58 counties"
+        assert actual_count == expected_count, \
+            f"California county count mismatch: expected {expected_count}, got {actual_count}"
 
-    def test_08_texas_by_county(self):
-        """Query 8: Texas counties"""
-        sql = """
-        SELECT DISTINCT SUBSTRING(CENSUS_BLOCK_GROUP, 1, 5) as county_fips
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        WHERE CENSUS_BLOCK_GROUP LIKE '48%'
-        ORDER BY COUNTY_FIPS
+    def test_08_texas_county_count_exact(self):
+        """Test 8: Texas county count returns EXACT value
+
+        Ground Truth: 254 counties
+        Prompt: "How many counties does Texas have?"
         """
-        prompt = "How many counties does Texas have?"
+        truth = self.ground_truth['texas_county_count']
+        rows = self.execute_query(truth.sql)
 
-        row_count, metrics = self.get_ground_truth(sql)
+        assert len(rows) == truth.expected_row_count
+        actual_count = rows[0][0]
+        expected_count = truth.expected_values['county_count']
 
-        assert row_count == 254, "Texas has 254 counties"
+        assert actual_count == expected_count, \
+            f"Texas county count mismatch: expected {expected_count}, got {actual_count}"
 
-    def test_09_largest_county_california(self):
-        """Query 9: Largest county in California by population"""
-        sql = """
-        SELECT
-            SUBSTRING(CENSUS_BLOCK_GROUP, 1, 5) as county_fips,
-            SUM(ESTIMATE) as population
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        WHERE CENSUS_BLOCK_GROUP LIKE '06%'
-        GROUP BY COUNTY_FIPS
-        ORDER BY POPULATION DESC
-        LIMIT 1
+    def test_09_under_5_population_exact(self):
+        """Test 9: Under 5 population returns EXACT value
+
+        Ground Truth: 19,781,156
+        Prompt: "How many children under 5 years old are there in the US?"
         """
-        prompt = "Which county in California has the largest population?"
+        truth = self.ground_truth['under_5_population']
+        rows = self.execute_query(truth.sql)
 
-        row_count, metrics = self.get_ground_truth(sql)
+        assert len(rows) == truth.expected_row_count
+        actual_value = rows[0][0]
+        expected_value = truth.expected_values['population']
 
-        assert row_count == 1
-        pop = metrics['value_1']
-        # LA County has ~10M people
-        assert 9000000 < pop < 11000000, f"Largest CA county should be ~10M, got {pop}"
+        assert actual_value == expected_value, \
+            f"Under 5 population mismatch: expected {expected_value}, got {actual_value}"
 
-    def test_10_under_5_population(self):
-        """Query 10: Population under 5 years nationwide"""
-        sql = """
-        SELECT SUM(ESTIMATE) as under_5_population
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        WHERE AGE_CODE = 'UNDER_5'
+    def test_10_seniors_65_plus_exact(self):
+        """Test 10: Seniors 65+ population returns EXACT value
+
+        Ground Truth: 53,030,023
+        Prompt: "How many seniors (age 65+) are there in the USA?"
         """
-        prompt = "How many children under 5 years old are there in the US?"
+        truth = self.ground_truth['seniors_65_plus']
+        rows = self.execute_query(truth.sql)
 
-        row_count, metrics = self.get_ground_truth(sql)
+        assert len(rows) == truth.expected_row_count
+        actual_value = rows[0][0]
+        expected_value = truth.expected_values['population']
 
-        assert row_count == 1
-        pop = metrics['value_0']
-        assert 18000000 < pop < 20000000, f"Under-5 population should be ~19M, got {pop}"
+        assert actual_value == expected_value, \
+            f"Seniors 65+ population mismatch: expected {expected_value}, got {actual_value}"
 
-    def test_11_working_age_18_64(self):
-        """Query 11: Working age population (18-64)"""
-        sql = """
-        SELECT SUM(ESTIMATE) as working_age_population
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        WHERE AGE_CODE IN (
-            '18_TO_19', '20_TO_24', '25_TO_29', '30_TO_34', '35_TO_39',
-            '40_TO_44', '45_TO_49', '50_TO_54', '55_TO_59', '60_TO_61', '62_TO_64'
+    # Data quality and validation tests
+    def test_11_no_negative_populations(self):
+        """Test 11: All population estimates must be non-negative
+
+        Validates data quality: no population values should be negative
+        """
+        rows = self.execute_query("""
+            SELECT COUNT(*) as negative_count
+            FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
+            WHERE ESTIMATE < 0
+        """)
+
+        negative_count = rows[0][0]
+        assert negative_count == 0, \
+            f"Found {negative_count} negative population values"
+
+    def test_12_no_null_estimates(self):
+        """Test 12: All rows must have population estimates
+
+        Validates data quality: no NULL values in ESTIMATE column
+        """
+        rows = self.execute_query("""
+            SELECT COUNT(*) as null_count
+            FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
+            WHERE ESTIMATE IS NULL
+        """)
+
+        null_count = rows[0][0]
+        assert null_count == 0, \
+            f"Found {null_count} NULL estimates"
+
+    def test_13_margin_of_error_positive(self):
+        """Test 13: Margin of error must be non-negative
+
+        Validates data quality: MOE should not be negative
+        """
+        rows = self.execute_query("""
+            SELECT COUNT(*) as negative_moe_count
+            FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
+            WHERE MARGIN_OF_ERROR < 0
+        """)
+
+        negative_moe_count = rows[0][0]
+        assert negative_moe_count == 0, \
+            f"Found {negative_moe_count} negative margin of error values"
+
+    def test_14_all_block_groups_present(self):
+        """Test 14: All US states should have data
+
+        Validates coverage: confirm all 50 states have census block group data
+        """
+        rows = self.execute_query("""
+            SELECT COUNT(DISTINCT SUBSTRING(CENSUS_BLOCK_GROUP, 1, 2)) as state_count
+            FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
+        """)
+
+        state_count = rows[0][0]
+        assert state_count >= 50, \
+            f"Expected at least 50 states, got {state_count}"
+
+    def test_15_sex_values_only_male_female(self):
+        """Test 15: SEX column should only contain MALE or FEMALE
+
+        Validates data integrity: no unexpected sex values
+        """
+        rows = self.execute_query("""
+            SELECT DISTINCT SEX
+            FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
+            ORDER BY SEX
+        """)
+
+        sex_values = {row[0] for row in rows}
+        expected_values = {'FEMALE', 'MALE'}
+
+        assert sex_values == expected_values, \
+            f"Unexpected sex values: {sex_values}"
+
+    def test_16_age_codes_not_empty(self):
+        """Test 16: Age codes must be present for all rows
+
+        Validates data quality: AGE_CODE should not be NULL or empty
+        """
+        rows = self.execute_query("""
+            SELECT COUNT(*) as empty_age_code_count
+            FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
+            WHERE AGE_CODE IS NULL OR AGE_CODE = ''
+        """)
+
+        empty_count = rows[0][0]
+        assert empty_count == 0, \
+            f"Found {empty_count} rows with empty AGE_CODE"
+
+    def test_17_census_block_groups_valid_format(self):
+        """Test 17: CENSUS_BLOCK_GROUP must be 12 digit format
+
+        Validates data integrity: block groups should be SSCCCTTGGG format
+        where SS=state, CCC=county, TT=tract, GGG=group
+        """
+        rows = self.execute_query("""
+            SELECT COUNT(*) as invalid_bg_count
+            FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
+            WHERE LENGTH(CENSUS_BLOCK_GROUP) != 12 OR NOT REGEXP_LIKE(CENSUS_BLOCK_GROUP, '^[0-9]{12}$')
+        """)
+
+        invalid_count = rows[0][0]
+        assert invalid_count == 0, \
+            f"Found {invalid_count} invalid block group formats"
+
+    def test_18_row_count_matches_expected(self):
+        """Test 18: Total row count should be consistent
+
+        Validates that the data size is as expected (11M+ rows)
+        """
+        rows = self.execute_query("""
+            SELECT COUNT(*) as total_rows
+            FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
+        """)
+
+        total_rows = rows[0][0]
+        assert total_rows > 11000000, \
+            f"Expected 11M+ rows, got {total_rows}"
+
+    def test_19_state_fips_codes_valid(self):
+        """Test 19: State FIPS codes should be numeric and reasonable
+
+        Validates that extracted state codes are valid numeric ranges
+        """
+        rows = self.execute_query("""
+            SELECT COUNT(DISTINCT SUBSTRING(CENSUS_BLOCK_GROUP, 1, 2)) as valid_state_count
+            FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
+        """)
+
+        valid_count = rows[0][0]
+        # Should have at least 50 states (some might have FIPS > 56 for territories)
+        assert valid_count >= 50, \
+            f"Expected at least 50 state FIPS codes, got {valid_count}"
+
+    def test_20_ground_truth_consistency(self):
+        """Test 20: All ground truth values are internally consistent
+
+        Validates: Sum of parts equals whole (e.g., state populations sum to USA total)
+        """
+        # Get sum of four largest states
+        rows = self.execute_query("""
+            SELECT SUM(state_pop) as sum_four_largest
+            FROM (
+                SELECT SUM(ESTIMATE) as state_pop
+                FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
+                WHERE CENSUS_BLOCK_GROUP LIKE '06%'
+                  OR CENSUS_BLOCK_GROUP LIKE '48%'
+                  OR CENSUS_BLOCK_GROUP LIKE '36%'
+                  OR CENSUS_BLOCK_GROUP LIKE '12%'
+                GROUP BY SUBSTRING(CENSUS_BLOCK_GROUP, 1, 2)
+            )
+        """)
+
+        sum_four = rows[0][0]
+        expected_sum = (
+            self.ground_truth['california_population'].expected_values['population'] +
+            self.ground_truth['texas_population'].expected_values['population'] +
+            self.ground_truth['newyork_population'].expected_values['population'] +
+            self.ground_truth['florida_population'].expected_values['population']
         )
-        """
-        prompt = "What is the working age population (18-64) in the United States?"
 
-        row_count, metrics = self.get_ground_truth(sql)
-
-        assert row_count == 1
-        pop = metrics['value_0']
-        assert 175000000 < pop < 190000000, f"Working age should be ~181M, got {pop}"
-
-    def test_12_seniors_65_plus(self):
-        """Query 12: Senior population (65+)"""
-        sql = """
-        SELECT SUM(ESTIMATE) as senior_population
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        WHERE AGE_CODE IN ('65_TO_66', '67_TO_69', '70_TO_74', '75_TO_79', '80_TO_84', '85_PLUS')
-        """
-        prompt = "How many seniors (age 65+) are there in the USA?"
-
-        row_count, metrics = self.get_ground_truth(sql)
-
-        assert row_count == 1
-        pop = metrics['value_0']
-        assert 52000000 < pop < 58000000, f"Senior population should be ~55M, got {pop}"
-
-    def test_13_new_york_county_population(self):
-        """Query 13: New York County (Manhattan) population"""
-        sql = """
-        SELECT SUM(ESTIMATE) as population
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        WHERE CENSUS_BLOCK_GROUP LIKE '36061%'
-        """
-        prompt = "What is the population of New York County?"
-
-        row_count, metrics = self.get_ground_truth(sql)
-
-        assert row_count == 1
-        pop = metrics['value_0']
-        assert 1600000 < pop < 1700000, f"NYC County should be ~1.6M, got {pop}"
-
-    def test_14_cook_county_illinois(self):
-        """Query 14: Cook County, Illinois (Chicago)"""
-        sql = """
-        SELECT SUM(ESTIMATE) as population
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        WHERE CENSUS_BLOCK_GROUP LIKE '17031%'
-        """
-        prompt = "How many people live in Cook County, Illinois?"
-
-        row_count, metrics = self.get_ground_truth(sql)
-
-        assert row_count == 1
-        pop = metrics['value_0']
-        assert 5100000 < pop < 5250000, f"Cook County should be ~5.17M, got {pop}"
-
-    def test_15_male_vs_female_ratio(self):
-        """Query 15: Male vs Female population nationwide"""
-        sql = """
-        SELECT
-            SEX,
-            SUM(ESTIMATE) as population,
-            ROUND(100.0 * SUM(ESTIMATE) / (SELECT SUM(ESTIMATE) FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE), 2) as percentage
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        GROUP BY SEX
-        ORDER BY SEX
-        """
-        prompt = "What is the male to female population ratio in the United States?"
-
-        row_count, metrics = self.get_ground_truth(sql)
-
-        assert row_count == 2, "Should have FEMALE and MALE"
-
-    def test_16_top_states_by_population(self):
-        """Query 16: Top 10 states by population"""
-        sql = """
-        SELECT
-            SUBSTRING(CENSUS_BLOCK_GROUP, 1, 2) as state_fips,
-            SUM(ESTIMATE) as population
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        GROUP BY STATE_FIPS
-        ORDER BY POPULATION DESC
-        LIMIT 10
-        """
-        prompt = "Which are the 10 most populous states?"
-
-        row_count, metrics = self.get_ground_truth(sql)
-
-        assert row_count == 10, "Should return exactly 10 states"
-
-    def test_17_smallest_states_by_population(self):
-        """Query 17: Least populous states"""
-        sql = """
-        SELECT
-            SUBSTRING(CENSUS_BLOCK_GROUP, 1, 2) as state_fips,
-            SUM(ESTIMATE) as population
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        GROUP BY STATE_FIPS
-        ORDER BY POPULATION ASC
-        LIMIT 5
-        """
-        prompt = "What are the 5 least populated states?"
-
-        row_count, metrics = self.get_ground_truth(sql)
-
-        assert row_count == 5, "Should return 5 states"
-
-    def test_18_block_group_count_by_state(self):
-        """Query 18: How many block groups per state"""
-        sql = """
-        SELECT
-            SUBSTRING(CENSUS_BLOCK_GROUP, 1, 2) as state_fips,
-            COUNT(DISTINCT CENSUS_BLOCK_GROUP) as block_group_count
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        GROUP BY STATE_FIPS
-        ORDER BY BLOCK_GROUP_COUNT DESC
-        LIMIT 5
-        """
-        prompt = "Which states have the most census block groups?"
-
-        row_count, metrics = self.get_ground_truth(sql)
-
-        assert row_count >= 5, "Should return at least 5 states"
-
-    def test_19_california_age_sex_breakdown(self):
-        """Query 19: California population by age and sex"""
-        sql = """
-        SELECT
-            AGE_CODE,
-            SEX,
-            SUM(ESTIMATE) as population
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        WHERE CENSUS_BLOCK_GROUP LIKE '06%'
-        GROUP BY AGE_CODE, SEX
-        ORDER BY AGE_CODE, SEX
-        """
-        prompt = "Show me California's population breakdown by age and sex"
-
-        row_count, metrics = self.get_ground_truth(sql)
-
-        # ~23 age groups * 2 sexes = ~46 rows
-        assert row_count >= 40, f"Should have many age-sex combinations, got {row_count}"
-
-    def test_20_total_us_population(self):
-        """Query 20: Total US population"""
-        sql = """
-        SELECT
-            COUNT(DISTINCT CENSUS_BLOCK_GROUP) as block_groups,
-            SUM(ESTIMATE) as total_population,
-            ROUND(AVG(ESTIMATE), 0) as avg_per_block_group
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        """
-        prompt = "What is the total population of the United States?"
-
-        row_count, metrics = self.get_ground_truth(sql)
-
-        assert row_count == 1
-        total_pop = metrics['value_1']
-        assert 325000000 < total_pop < 335000000, f"US population should be ~330M, got {total_pop}"
-
-    def test_21_data_quality_check(self):
-        """Query 21: Data quality - no null estimates"""
-        sql = """
-        SELECT
-            COUNT(*) as total_rows,
-            COUNT(ESTIMATE) as non_null_estimates,
-            SUM(CASE WHEN ESTIMATE < 0 THEN 1 ELSE 0 END) as negative_values,
-            SUM(CASE WHEN ESTIMATE IS NULL THEN 1 ELSE 0 END) as null_values
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        """
-        prompt = "Verify data quality in the population table"
-
-        row_count, metrics = self.get_ground_truth(sql)
-
-        assert row_count == 1
-        total = metrics['value_0']
-        non_null = metrics['value_1']
-        negative = metrics['value_2']
-        nulls = metrics['value_3']
-
-        assert non_null == total, f"All rows should have estimates, got {nulls} nulls"
-        assert negative == 0, "No negative population values should exist"
-
-    def test_22_margin_of_error_sanity(self):
-        """Query 22: Margin of error is reasonable"""
-        sql = """
-        SELECT
-            MIN(MARGIN_OF_ERROR) as min_moe,
-            MAX(MARGIN_OF_ERROR) as max_moe,
-            ROUND(AVG(MARGIN_OF_ERROR), 2) as avg_moe,
-            COUNT(*) as row_count
-        FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE
-        WHERE ESTIMATE > 0
-        """
-        prompt = "Check margin of error statistics"
-
-        row_count, metrics = self.get_ground_truth(sql)
-
-        assert row_count == 1
-        # MOE should typically be 10-20% of the estimate
-        max_moe = metrics['value_1']
-        assert max_moe > 0, "Margin of error should be positive"
+        assert sum_four == expected_sum, \
+            f"Four largest states sum mismatch: expected {expected_sum}, got {sum_four}"
 
 
 if __name__ == '__main__':

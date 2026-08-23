@@ -46,7 +46,7 @@ def capture_ground_truth() -> Dict[str, QueryGroundTruth]:
     ground_truth['california_population'] = QueryGroundTruth(
         name='California Population',
         prompt='What is the total population of California?',
-        sql='SELECT SUM(ESTIMATE) FROM FACT_POPULATION_AGE WHERE CENSUS_BLOCK_GROUP LIKE \'06%\'',
+        sql='SELECT SUM(ESTIMATE) FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE WHERE CENSUS_BLOCK_GROUP LIKE \'06%\'',
         expected_row_count=1,
         expected_values={'population': row[0]}
     )
@@ -61,7 +61,7 @@ def capture_ground_truth() -> Dict[str, QueryGroundTruth]:
     ground_truth['texas_population'] = QueryGroundTruth(
         name='Texas Population',
         prompt='What is the population of Texas?',
-        sql='SELECT SUM(ESTIMATE) FROM FACT_POPULATION_AGE WHERE CENSUS_BLOCK_GROUP LIKE \'48%\'',
+        sql='SELECT SUM(ESTIMATE) FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE WHERE CENSUS_BLOCK_GROUP LIKE \'48%\'',
         expected_row_count=1,
         expected_values={'population': row[0]}
     )
@@ -76,7 +76,7 @@ def capture_ground_truth() -> Dict[str, QueryGroundTruth]:
     ground_truth['newyork_population'] = QueryGroundTruth(
         name='New York Population',
         prompt='How many people live in New York?',
-        sql='SELECT SUM(ESTIMATE) FROM FACT_POPULATION_AGE WHERE CENSUS_BLOCK_GROUP LIKE \'36%\'',
+        sql='SELECT SUM(ESTIMATE) FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE WHERE CENSUS_BLOCK_GROUP LIKE \'36%\'',
         expected_row_count=1,
         expected_values={'population': row[0]}
     )
@@ -91,7 +91,7 @@ def capture_ground_truth() -> Dict[str, QueryGroundTruth]:
     ground_truth['florida_population'] = QueryGroundTruth(
         name='Florida Population',
         prompt='What is Florida\'s population?',
-        sql='SELECT SUM(ESTIMATE) FROM FACT_POPULATION_AGE WHERE CENSUS_BLOCK_GROUP LIKE \'12%\'',
+        sql='SELECT SUM(ESTIMATE) FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE WHERE CENSUS_BLOCK_GROUP LIKE \'12%\'',
         expected_row_count=1,
         expected_values={'population': row[0]}
     )
@@ -109,7 +109,7 @@ def capture_ground_truth() -> Dict[str, QueryGroundTruth]:
     ground_truth['california_sex_breakdown'] = QueryGroundTruth(
         name='California Sex Breakdown',
         prompt='Show population breakdown by sex for California',
-        sql='SELECT SEX, SUM(ESTIMATE) FROM FACT_POPULATION_AGE WHERE CENSUS_BLOCK_GROUP LIKE \'06%\' GROUP BY SEX',
+        sql='SELECT SEX, SUM(ESTIMATE) FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE WHERE CENSUS_BLOCK_GROUP LIKE \'06%\' GROUP BY SEX',
         expected_row_count=2,
         expected_values=sex_breakdown
     )
@@ -123,7 +123,7 @@ def capture_ground_truth() -> Dict[str, QueryGroundTruth]:
     ground_truth['usa_total_population'] = QueryGroundTruth(
         name='USA Total Population',
         prompt='What is the total population of the United States?',
-        sql='SELECT SUM(ESTIMATE) FROM FACT_POPULATION_AGE',
+        sql='SELECT SUM(ESTIMATE) FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE',
         expected_row_count=1,
         expected_values={'population': row[0]}
     )
@@ -138,7 +138,7 @@ def capture_ground_truth() -> Dict[str, QueryGroundTruth]:
     ground_truth['california_county_count'] = QueryGroundTruth(
         name='California County Count',
         prompt='How many counties are in California?',
-        sql='SELECT COUNT(DISTINCT SUBSTRING(CENSUS_BLOCK_GROUP, 1, 5)) FROM FACT_POPULATION_AGE WHERE CENSUS_BLOCK_GROUP LIKE \'06%\'',
+        sql='SELECT COUNT(DISTINCT SUBSTRING(CENSUS_BLOCK_GROUP, 1, 5)) FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE WHERE CENSUS_BLOCK_GROUP LIKE \'06%\'',
         expected_row_count=1,
         expected_values={'county_count': row[0]}
     )
@@ -153,7 +153,7 @@ def capture_ground_truth() -> Dict[str, QueryGroundTruth]:
     ground_truth['texas_county_count'] = QueryGroundTruth(
         name='Texas County Count',
         prompt='How many counties does Texas have?',
-        sql='SELECT COUNT(DISTINCT SUBSTRING(CENSUS_BLOCK_GROUP, 1, 5)) FROM FACT_POPULATION_AGE WHERE CENSUS_BLOCK_GROUP LIKE \'48%\'',
+        sql='SELECT COUNT(DISTINCT SUBSTRING(CENSUS_BLOCK_GROUP, 1, 5)) FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE WHERE CENSUS_BLOCK_GROUP LIKE \'48%\'',
         expected_row_count=1,
         expected_values={'county_count': row[0]}
     )
@@ -168,7 +168,7 @@ def capture_ground_truth() -> Dict[str, QueryGroundTruth]:
     ground_truth['under_5_population'] = QueryGroundTruth(
         name='Under 5 Population',
         prompt='How many children under 5 years old are there in the US?',
-        sql='SELECT SUM(ESTIMATE) FROM FACT_POPULATION_AGE WHERE AGE_CODE = \'UNDER_5\'',
+        sql='SELECT SUM(ESTIMATE) FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE WHERE AGE_CODE = \'UNDER_5\'',
         expected_row_count=1,
         expected_values={'population': row[0]}
     )
@@ -183,7 +183,7 @@ def capture_ground_truth() -> Dict[str, QueryGroundTruth]:
     ground_truth['seniors_65_plus'] = QueryGroundTruth(
         name='Seniors 65+',
         prompt='How many seniors (age 65+) are there in the USA?',
-        sql='SELECT SUM(ESTIMATE) FROM FACT_POPULATION_AGE WHERE AGE_CODE IN (\'65_TO_66\', \'67_TO_69\', \'70_TO_74\', \'75_TO_79\', \'80_TO_84\', \'85_PLUS\')',
+        sql='SELECT SUM(ESTIMATE) FROM CENSUS_NEIGHBORHOOD_INSIGHTS.CURATED.FACT_POPULATION_AGE WHERE AGE_CODE IN (\'65_TO_66\', \'67_TO_69\', \'70_TO_74\', \'75_TO_79\', \'80_TO_84\', \'85_PLUS\')',
         expected_row_count=1,
         expected_values={'population': row[0]}
     )
