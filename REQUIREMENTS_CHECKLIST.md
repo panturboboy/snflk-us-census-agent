@@ -88,24 +88,43 @@
 
 ---
 
-### ⚠️ Conversation Context Preservation
+### ✅ Conversation Context Preservation
 - [x] Session state stores message history (UI display)
 - [x] User/assistant roles tracked
 - [x] Clear conversation button to reset
-- ❌ **Context NOT passed to Cortex** (Cortex Analyst API limitation)
+- [x] **Context passed to Cortex via accumulated message** ✨
 
-**Status:** Partial - History preserved for UI, not for multi-turn analysis
+**Status:** Complete (fixed!)
 
-**Limitation:** Cortex Analyst REST API returns 400 errors when conversation history is included in requests. After testing multiple approaches (sanitization, minimal messages, reordering), root cause appears to be a Cortex API constraint.
+**Solution:** Cortex API 400 errors were caused by multiple alternating messages. Fix: Accumulate all previous questions into a single message combined with the current question.
+
+**Example:**
+```
+Before (FAILED):
+  messages = [
+    {role: "user", content: "Q1"},
+    {role: "assistant", content: "A1"},
+    {role: "user", content: "Q2"}
+  ]
+  → 400 "invalid payload"
+
+After (WORKS):
+  messages = [
+    {role: "user", content: "Context from Q1. Now, Q2"}
+  ]
+  → 200 OK with data
+```
+
+**Testing:** 3-turn conversation verified working:
+- Q1: "population by age group in New York" → 23 rows
+- Q2: "Now show me Texas data" (with Q1 context) → 46 rows
+- Q3: "Compare California to both states" (with Q1+Q2 context) → 46 rows
 
 **Impact:**
-- ✅ Each question can be answered independently
-- ❌ Anaphoric references don't work ("Which age group is most common?" after "Show me NY population")
-- ❌ Multi-turn conversations lose context
-
-**Workaround:** Users can copy/paste previous answers into new questions for context
-
-**Future:** Contact Snowflake support for official context passing guidance or upgraded API documentation
+- ✅ Multi-turn conversations work
+- ✅ Anaphoric references work ("Show data for Texas" after "New York")
+- ✅ Users can ask follow-up questions with context
+- ✅ Cleaner API: single user message instead of alternating
 
 ---
 
