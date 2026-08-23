@@ -103,7 +103,7 @@ with st.sidebar:
         # Create clickable button for each example
         if st.button(f"• {example}", key=f"example_{i}", use_container_width=True):
             # Update the input field with the clicked example
-            st.session_state.user_input = example
+            st.session_state.user_input_text = example
             st.rerun()
 
 # Main chat interface
