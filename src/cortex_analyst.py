@@ -8,6 +8,42 @@ class CortexAnalyst:
     SEMANTIC_VIEW = "CENSUS_NEIGHBORHOOD_INSIGHTS.SEMANTIC.CENSUS_DEMOGRAPHICS_MODEL"
     API_TOKEN = os.getenv("CORTEX_ANALYST_TOKEN", "")
 
+    # Available dimensions and metrics in the semantic model
+    AVAILABLE_DIMENSIONS = {
+        "Geographic": ["State", "County", "Block Group"],
+        "Demographics": ["Age Group", "Sex/Gender"],
+        "Household": ["Household Type"],
+        "Race/Ethnicity": ["Race/Ethnicity Category"]
+    }
+
+    AVAILABLE_METRICS = {
+        "Population": ["Population Estimate", "Margin of Error"],
+        "Households": ["Household Count", "Household Margin of Error"]
+    }
+
+    AVAILABLE_AGE_GROUPS = [
+        "Under 5 years", "5 to 9 years", "10 to 14 years", "15 to 17 years",
+        "18 to 19 years", "20 years", "21 years", "22 to 24 years",
+        "25 to 29 years", "30 to 34 years", "35 to 39 years", "40 to 44 years",
+        "45 to 49 years", "50 to 54 years", "55 to 59 years", "60 to 61 years",
+        "62 to 64 years", "65 to 66 years", "67 to 69 years", "70 to 74 years",
+        "75 to 79 years", "80 to 84 years", "85 years and over"
+    ]
+
+    @staticmethod
+    def get_capabilities_summary() -> str:
+        """Return user-friendly summary of what the agent can answer."""
+        age_groups = ", ".join(CortexAnalyst.AVAILABLE_AGE_GROUPS[:5]) + ", ..."
+        return f"""I can answer questions about US Census demographics with these available data:
+
+**Geographic Levels:** State, County, Block Group
+**Demographics:** Age groups ({age_groups})
+**Household Data:** Total households, household types
+**Race/Ethnicity:** 9 racial and ethnic categories
+**Metrics:** Population estimates and margins of error
+
+Example: "What is the population of California?" or "Show population by age group nationally"."""
+
     @staticmethod
     def query(user_message: str, conversation_history: list = None) -> dict:
         """
@@ -121,24 +157,26 @@ class CortexAnalyst:
             else:
                 # Gracefully handle API errors - likely irrelevant questions
                 if response.status_code == 400:
+                    capabilities = CortexAnalyst.get_capabilities_summary()
                     return {
-                        'response': "I couldn't understand that question. I can answer questions about US Census demographics like population by age, state, county, and household composition. Try rephrasing your question to focus on these demographic categories.",
+                        'response': f"I couldn't process that question - it may be asking about data I don't have.\n\n{capabilities}",
                         'data': [],
-                        'success': True,  # Mark as success to avoid error display
+                        'success': True,
                         'error': None
                     }
                 else:
-                    error_msg = response.json().get("message", response.text[:200]) if response.text else f"HTTP {response.status_code}"
+                    capabilities = CortexAnalyst.get_capabilities_summary()
                     return {
-                        'response': f"I couldn't process that question. Please rephrase it to ask about US Census demographics (population, age groups, states, counties, household types).",
+                        'response': f"I couldn't answer that question.\n\n{capabilities}",
                         'data': [],
                         'success': True,
                         'error': None
                     }
 
         except Exception as e:
+            capabilities = CortexAnalyst.get_capabilities_summary()
             return {
-                'response': "I couldn't answer that question. Please ask about US Census demographics like population by age, state, or household composition.",
+                'response': f"I couldn't answer that question.\n\n{capabilities}",
                 'data': [],
                 'success': True,
                 'error': None
