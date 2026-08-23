@@ -89,20 +89,63 @@ jobs:
         SNOWFLAKE_SCHEMA: ${{ env.SNOWFLAKE_SCHEMA }}
         SNOWFLAKE_WAREHOUSE: ${{ env.SNOWFLAKE_WAREHOUSE }}
 
-  notify:
+  deploy:
     needs: deploy-sql
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
-    - name: Notify Success
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install Snowflake CLI
+      run: |
+        pip install snowflake-cli-labs
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Create deployment package
+      run: |
+        mkdir -p dist/src
+        cp streamlit_app.py dist/
+        cp requirements.txt dist/
+        cp -r src/* dist/src/
+        ls -la dist/
+
+    - name: Upload to Snowflake Stage
+      run: |
+        python scripts/deploy.py
+      env:
+        DEPLOY_ENV: prod
+
+    - name: Deploy Streamlit App
+      run: |
+        python scripts/create_streamlit_app.py
+      env:
+        APP_NAME: census_chat_prod
+        WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+
+    - name: Run Smoke Tests
+      run: |
+        python scripts/smoke_test.py
+      env:
+        APP_ENV: prod
+
+    - name: Notify Deployment Success
       if: success()
       run: |
-        echo "✓ SQL layers deployed successfully"
-        echo "✓ Streamlit Cloud auto-deploying from GitHub"
+        echo "✓ App deployed successfully to Snowflake"
+        echo "✓ Access at: Snowflake Console → Streamlit → census_chat_prod"
 
-    - name: Notify Failure
+    - name: Notify Deployment Failure
       if: failure()
       run: |
-        echo "✗ SQL deployment failed"
+        echo "✗ Deployment failed. Check logs above."
         exit 1

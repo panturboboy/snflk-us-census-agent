@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 from src.cortex_analyst import CortexAnalyst
 
 # Page configuration
@@ -32,6 +33,12 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# Load Streamlit secrets into environment (for Streamlit Cloud)
+if st.secrets:
+    for key, value in st.secrets.items():
+        if not os.getenv(key):
+            os.environ[key] = str(value)
+
 # Initialize session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -40,11 +47,12 @@ if "connection_initialized" not in st.session_state:
     st.session_state.connection_initialized = False
     try:
         # Test Snowflake connection
-        conn = st.connection("snowflake")
-        _ = conn.query("SELECT 1")
+        from src.snowflake_client import SnowflakeClient
+        SnowflakeClient.get_connection()
         st.session_state.connection_initialized = True
     except Exception as e:
         st.error(f"Snowflake connection error: {e}")
+        st.info("Please add Snowflake secrets in Streamlit Cloud settings")
         st.stop()
 
 # Header
