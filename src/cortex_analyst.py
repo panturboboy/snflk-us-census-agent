@@ -31,6 +31,32 @@ class CortexAnalyst:
     ]
 
     @staticmethod
+    def check_if_age_group_exists(question: str) -> tuple[bool, str]:
+        """Check if question mentions an age group and if it exists in data."""
+        question_lower = question.lower()
+
+        # Check for common age group mentions
+        for age_group in CortexAnalyst.AVAILABLE_AGE_GROUPS:
+            if age_group.lower() in question_lower:
+                return True, age_group  # Found exact match
+
+        # Check for "age X years" pattern
+        import re
+        age_pattern = r'age\s+(\d+)\s+years?'
+        match = re.search(age_pattern, question_lower)
+        if match:
+            age_mentioned = match.group(1)
+            available = ", ".join(CortexAnalyst.AVAILABLE_AGE_GROUPS)
+            return False, f"""I don't have a specific "age {age_mentioned} years" category.
+
+**Available age groups:**
+{available}
+
+**Tip:** Try asking about "Under 5 years" or "25 to 29 years" instead."""
+
+        return True, ""  # No age group mentioned
+
+    @staticmethod
     def get_capabilities_summary() -> str:
         """Return user-friendly summary of what the agent can answer."""
         age_groups = ", ".join(CortexAnalyst.AVAILABLE_AGE_GROUPS[:5]) + ", ..."
@@ -58,6 +84,16 @@ Example: "What is the population of California?" or "Show population by age grou
         """
         if conversation_history is None:
             conversation_history = []
+
+        # Pre-check: detect if asking about specific age groups
+        age_exists, age_msg = CortexAnalyst.check_if_age_group_exists(user_message)
+        if not age_exists:
+            return {
+                'response': age_msg,
+                'data': [],
+                'success': True,
+                'error': None
+            }
 
         try:
             # Build Snowflake API endpoint
