@@ -59,7 +59,7 @@ Example: "What is the population of California?" or "Show population by age grou
     @staticmethod
     def diagnose_empty_results(user_message: str, sql_query: str) -> str:
         """
-        Ask Cortex why the query returned no results.
+        Ask Cortex to explain in user-friendly terms why the query returned no results.
         """
         try:
             account = SnowflakeConfig.ACCOUNT
@@ -71,12 +71,17 @@ Example: "What is the population of California?" or "Show population by age grou
                 "X-Snowflake-Authorization-Token-Type": "PROGRAMMATIC_ACCESS_TOKEN"
             }
 
-            diagnostic_prompt = f"""The query for "{user_message}" returned 0 rows:
+            diagnostic_prompt = f"""User asked: "{user_message}"
 
-{sql_query}
+This query returned 0 rows. Explain to the user in simple terms:
+1. WHY their question cannot be answered (e.g., "age 0 doesn't exist as individual values")
+2. WHAT they asked for that doesn't exist in the data
+3. WHAT alternatives or similar values ARE available (e.g., "age groups like 'Under 5 years'")
 
-Briefly explain why this query might return no results. Is this expected (e.g., data doesn't exist)
-or should we try a different approach? Be concise."""
+Be friendly and actionable. Example:
+"I cannot answer this because age 0 is part of a wider age band. The Census data has age GROUPS like 'Under 5 years' (ages 0-4), 'Under 5 to 9 years', etc. Try asking about one of these age groups instead."
+
+Keep it under 100 words."""
 
             messages = [
                 {
@@ -109,12 +114,12 @@ or should we try a different approach? Be concise."""
                     if content_block.get("type") == "text":
                         return content_block.get("text", "").strip()
 
-                return "Could not determine why no results were found."
+                return "No results found for that query."
             else:
-                return "Could not diagnose empty results."
+                return "No results found for that query."
 
         except Exception as e:
-            return f"Error diagnosing results: {str(e)}"
+            return f"No results found for that query."
 
     @staticmethod
     def query(user_message: str, conversation_history: list = None) -> dict:
