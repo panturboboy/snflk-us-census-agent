@@ -1,6 +1,5 @@
 streamlit==1.28.1
 pydantic>=2.7.0
-pillow>=11.0.0
 snowflake-connector-python[pandas]>=3.7.0
 snowflake-snowpark-python>=1.11.0
 python-dotenv==1.0.0
