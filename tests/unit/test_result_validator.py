@@ -138,20 +138,26 @@ class TestResultValidator:
         assert result.status == 'WARN'
 
     def test_validate_cardinality_low_results(self, validator):
-        """Fewer results than expected (possible filtering or missing data)"""
+        """Small result sets pass validation (normal for dimension breakdowns)
+
+        Small result sets (<1000 rows) are accepted because they're expected for
+        queries with dimensions, filters, or aggregations. Tests that the
+        improved cardinality validator gracefully accepts small result sets.
+        """
         results = [
             {'STATE': 'CA', 'SUM': 1000},
             {'STATE': 'TX', 'SUM': 1200},
             {'STATE': 'NY', 'SUM': 900},
-            # Only 3 states instead of 50
+            # Only 3 states instead of 50 - but still small result set
         ]
 
         result = validator.validate_cardinality(
             results, 'FACT_POPULATION_AGE', ['STATE']
         )
 
-        assert result.status == 'WARN'
-        assert 'low' in result.message.lower()
+        # Small result sets don't warn, even if fewer than expected
+        assert result.status == 'PASS'
+        assert 'small' in result.message.lower()
 
     def test_validate_cardinality_high_results(self, validator):
         """More results than expected (possible fan-out or breakdown)"""

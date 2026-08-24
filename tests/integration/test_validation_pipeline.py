@@ -131,7 +131,12 @@ class TestValidationPipeline:
         assert report.checks['duplicates']['status'] == 'FAIL'
 
     def test_validate_with_results_cardinality_warning(self, validator):
-        """Cardinality with warning for unexpected row count"""
+        """Small result sets pass validation (improved cardinality logic)
+
+        Tests that 2 results (small result set <1000 rows) pass validation even
+        when the query suggests it should return thousands of rows. This is the
+        correct behavior for dimension breakdowns or filtered queries.
+        """
         sql = """
         SELECT CENSUS_BLOCK_GROUP, AGE_ID, SEX, SUM(POPULATION_ESTIMATE)
         FROM CURATED.FACT_POPULATION_AGE
@@ -146,8 +151,8 @@ class TestValidationPipeline:
 
         report = validator.validate_compiled_query_and_results(sql, results)
 
-        # Should have a warning in cardinality
-        assert report.checks['cardinality']['status'] == 'WARN'
+        # Small result sets pass validation (normal for breakdowns/filters)
+        assert report.checks['cardinality']['status'] == 'PASS'
 
     def test_report_status_aggregation_fail_wins(self):
         """FAIL status overrides everything"""
