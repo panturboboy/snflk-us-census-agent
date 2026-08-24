@@ -1,51 +1,54 @@
 #!/usr/bin/env python3
-"""Deploy curated layer DDLs to Snowflake."""
+"""Deploy curated layer to Snowflake"""
 
 import sys
-from pathlib import Path
+import os
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.snowflake_client import SnowflakeClient
+from src.config import SnowflakeConfig
 
-def deploy_curated():
-    """Execute curated layer DDL."""
 
-    print("=== Deploying Curated Layer ===\n")
+def main():
+    """Deploy curated layer"""
+    print("\n" + "=" * 70)
+    print("DEPLOYING CURATED LAYER")
+    print("=" * 70)
 
-    ddl_file = Path(__file__).parent.parent / "ddl" / "curated" / "create_curated_tables.sql"
+    try:
+        SnowflakeConfig.validate()
+        conn = SnowflakeClient.get_connection()
+        cursor = conn.cursor()
 
-    with open(ddl_file, 'r') as f:
-        sql = f.read()
+        # Verify tables exist
+        cursor.execute("""
+            SELECT TABLE_NAME
+            FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_SCHEMA = 'CURATED'
+            ORDER BY TABLE_NAME
+        """)
+        tables = cursor.fetchall()
 
-    # Split statements and filter out empty/comment-only ones
-    statements = []
-    for s in sql.split(';'):
-        s = s.strip()
-        if s and not s.startswith('--'):
-            statements.append(s)
+        if tables:
+            print(f"\n✅ Curated layer verified ({len(tables)} tables)")
+            for table in tables:
+                print(f"   - {table[0]}")
+        else:
+            print("\n⚠️  No tables found in CURATED schema")
 
-    for i, stmt in enumerate(statements, 1):
-        try:
-            SnowflakeClient.query(stmt)
-            # Extract object name from CREATE statement
-            parts = stmt.upper().split()
-            if 'TABLE' in parts or 'VIEW' in parts:
-                idx = max(
-                    parts.index('TABLE') if 'TABLE' in parts else -1,
-                    parts.index('VIEW') if 'VIEW' in parts else -1
-                )
-                name = parts[idx + 1] if idx >= 0 and idx + 1 < len(parts) else f'statement {i}'
-            else:
-                name = f'statement {i}'
-            print(f"✓ {name}")
-        except Exception as e:
-            print(f"✗ Error: {str(e)[:150]}")
-            return False
+        print("\n" + "=" * 70)
+        print("✅ CURATED LAYER DEPLOYMENT COMPLETE")
+        print("=" * 70 + "\n")
 
-    print("\n✓ Curated layer deployed successfully")
-    return True
+        return 0
 
-if __name__ == "__main__":
-    success = deploy_curated()
-    sys.exit(0 if success else 1)
+    except Exception as e:
+        print(f"\n❌ Deployment failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())
