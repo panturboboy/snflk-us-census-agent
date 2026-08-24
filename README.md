@@ -2,13 +2,15 @@
 
 Interactive chat agent for querying US Census demographics using Snowflake Cortex Analyst and Streamlit.
 
+**👉 [Live Demo & Instructions](instructions.md)** - Start here to use the deployed app
+
 **Features:**
 - 🤖 Natural language queries with Cortex Analyst
 - 📊 Real-time demographic data visualization
 - ✅ 4-layer validation pipeline (grain, duplicates, fan-out, cardinality)
 - 🔄 Multi-turn conversation context preservation
 - ⚡ Quick links for exploratory queries
-- 📈 Comprehensive test suite (43+ tests, all passing)
+- 📈 Comprehensive test suite (126+ tests, all passing)
 
 ## Quick Start
 
